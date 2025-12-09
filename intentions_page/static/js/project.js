@@ -338,6 +338,17 @@ function intentionBindHandlers (intention) {
         }
     })
 
+    $(intention).find('input[name=froggy]').on('change', function (e) {
+        checked = $(e.target).prop('checked')
+        intention = $(e.target).closest('.intention')
+        if (checked) {
+            // Un-frog all other intentions (only one can be froggy)
+            $('.intention').not(intention).each(function() {
+                $(this).find('input[name=froggy]').prop('checked', false)
+                $(this).find('.froggy-icon').remove()
+            })
+        }
+    })
 
     $(intention).find('.intention-edit-form').on('change', function(e) {
         form = $(e.target).closest('form')
