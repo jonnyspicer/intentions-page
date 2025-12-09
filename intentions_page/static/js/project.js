@@ -355,21 +355,6 @@ function intentionBindHandlers (intention) {
                 label.prepend('🐸 Mark as frog ')
                 label.append(checkbox)
             })
-
-            // Animate moving this intention to the top of the list
-            var intentionsList = intention.parent()
-
-            // Fade out, move, then fade in
-            intention.fadeOut(200, function() {
-                intention.detach().prependTo(intentionsList)
-                intention.fadeIn(200, function() {
-                    // Scroll the froggy intention into view after animation
-                    intention[0].scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'nearest'
-                    })
-                })
-            })
         }
     })
 
@@ -397,11 +382,28 @@ function intentionEditAJAX(form, intention){
             nodes = $.parseHTML(data)
             nodes = $(nodes)
 
+            // Check if this intention is now froggy
+            var isFroggy = nodes.find('input[name=froggy]').prop('checked')
+
             // re-writes the intention
             intention.replaceWith(nodes)
 
             // re-bind handlers
             intentionBindHandlers(nodes)
+
+            // If marked as froggy, animate moving to top
+            if (isFroggy) {
+                var intentionsList = nodes.parent()
+                nodes.fadeOut(200, function() {
+                    nodes.detach().prependTo(intentionsList)
+                    nodes.fadeIn(200, function() {
+                        nodes[0].scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'nearest'
+                        })
+                    })
+                })
+            }
 
             // If the intention we updated with Ajax had focus, it will have lost focus
             getFocusFromLocalStorage()
