@@ -256,6 +256,13 @@ Mousetrap.bind('f', function (e) {
     }
 })
 
+Mousetrap.bind('s', function (e) {
+    var has_focus = $('.intention_list').find('[has_keyboard_focus]')
+    if (has_focus.length){
+        has_focus.find('.sticky_button').click()
+    }
+})
+
 Mousetrap.bind('?', function (e) {
     $('#keyboardShortcutModal').modal('toggle')
 })

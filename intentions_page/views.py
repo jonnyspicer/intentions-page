@@ -15,6 +15,21 @@ from intentions_page.models import get_working_day_date
 def home(request):
     if request.user.is_authenticated:
         working_day_date = get_working_day_date()
+
+        # Copy sticky intentions from previous day(s)
+        # Handle multi-day gaps by iterating day by day
+        from django.db import models
+        last_intention_date = Intention.objects.filter(creator=request.user).aggregate(
+            models.Max('date')
+        )['date__max']
+
+        if last_intention_date and last_intention_date < working_day_date:
+            current_date = last_intention_date
+            while current_date < working_day_date:
+                next_date = current_date + timezone.timedelta(days=1)
+                Intention.copy_sticky_intentions_forward(request.user, current_date, next_date)
+                current_date = next_date
+
         tomorrow_date = working_day_date + timezone.timedelta(days=1)
 
         tomorrow_draft_field = get_or_init_intentions_draft_field(request.user, tomorrow_date)
