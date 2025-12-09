@@ -345,7 +345,12 @@ function intentionBindHandlers (intention) {
             // Un-frog all other intentions (only one can be froggy)
             $('.intention').not(intention).each(function() {
                 $(this).find('input[name=froggy]').prop('checked', false)
-                $(this).find('.froggy-icon').remove()
+
+                // Fade out the froggy icon smoothly
+                $(this).find('.froggy-icon').fadeOut(200, function() {
+                    $(this).remove()
+                })
+
                 // Update dropdown label to "Mark as frog"
                 var label = $(this).find('.froggy_button')
                 var checkbox = label.find('input[name=froggy]')
@@ -389,19 +394,19 @@ function intentionEditAJAX(form, intention){
             if (isFroggy) {
                 var intentionsList = intention.parent()
 
-                // Fade out in current position
-                intention.fadeOut(300, function() {
-                    // Replace with new HTML (while invisible)
+                // Fade out and slide up in current position
+                intention.fadeOut(200).slideUp(200, function() {
+                    // Replace with new HTML (while invisible and collapsed)
                     intention.replaceWith(nodes)
 
-                    // Move to top (still invisible)
+                    // Move to top (still invisible and collapsed)
                     nodes.detach().prependTo(intentionsList)
 
                     // Re-bind handlers
                     intentionBindHandlers(nodes)
 
-                    // Fade in at new position
-                    nodes.hide().fadeIn(300, function() {
+                    // Slide down and fade in at new position
+                    nodes.hide().slideDown(200).fadeIn(200, function() {
                         // Scroll into view after animation completes
                         nodes[0].scrollIntoView({
                             behavior: 'smooth',
