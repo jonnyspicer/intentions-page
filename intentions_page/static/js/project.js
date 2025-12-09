@@ -355,6 +355,16 @@ function intentionBindHandlers (intention) {
                 label.prepend('🐸 Mark as frog ')
                 label.append(checkbox)
             })
+
+            // Move this intention to the top of the list
+            var intentionsList = intention.parent()
+            intention.detach().prependTo(intentionsList)
+
+            // Scroll the froggy intention into view
+            intention[0].scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
+            })
         }
     })
 
