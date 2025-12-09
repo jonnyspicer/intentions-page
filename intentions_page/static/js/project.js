@@ -385,24 +385,34 @@ function intentionEditAJAX(form, intention){
             // Check if this intention is now froggy
             var isFroggy = nodes.find('input[name=froggy]').prop('checked')
 
-            // re-writes the intention
-            intention.replaceWith(nodes)
-
-            // re-bind handlers
-            intentionBindHandlers(nodes)
-
-            // If marked as froggy, animate moving to top
+            // If marked as froggy, animate the move smoothly
             if (isFroggy) {
-                var intentionsList = nodes.parent()
-                nodes.fadeOut(200, function() {
+                var intentionsList = intention.parent()
+
+                // Fade out in current position
+                intention.fadeOut(300, function() {
+                    // Replace with new HTML (while invisible)
+                    intention.replaceWith(nodes)
+
+                    // Move to top (still invisible)
                     nodes.detach().prependTo(intentionsList)
-                    nodes.fadeIn(200, function() {
+
+                    // Re-bind handlers
+                    intentionBindHandlers(nodes)
+
+                    // Fade in at new position
+                    nodes.hide().fadeIn(300, function() {
+                        // Scroll into view after animation completes
                         nodes[0].scrollIntoView({
                             behavior: 'smooth',
                             block: 'nearest'
                         })
                     })
                 })
+            } else {
+                // Not froggy, just replace normally
+                intention.replaceWith(nodes)
+                intentionBindHandlers(nodes)
             }
 
             // If the intention we updated with Ajax had focus, it will have lost focus
