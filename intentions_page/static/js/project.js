@@ -263,6 +263,13 @@ Mousetrap.bind('s', function (e) {
     }
 })
 
+Mousetrap.bind('g', function (e) {
+    var has_focus = $('.intention_list').find('[has_keyboard_focus]')
+    if (has_focus.length){
+        has_focus.find('.froggy_button').click()
+    }
+})
+
 Mousetrap.bind('?', function (e) {
     $('#keyboardShortcutModal').modal('toggle')
 })

@@ -22,9 +22,10 @@ class Intention(models.Model):
     completed = models.BooleanField(default=False)
     neverminded = models.BooleanField(default=False)
     sticky = models.BooleanField(default=False)
+    froggy = models.BooleanField(default=False)
 
     class Meta:
-        ordering = ['created_datetime']
+        ordering = ['-froggy', 'created_datetime']
 
     def __str__(self):
         return self.title

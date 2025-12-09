@@ -473,3 +473,24 @@ input[name="sticky"] {
 .sticky_button {
   cursor: pointer;
 }
+
+// ================================
+// FROGGY INTENTIONS
+// ================================
+
+// Hide froggy checkbox input (like sticky/neverminded)
+input[name="froggy"] {
+  display: none;
+}
+
+// Froggy emoji styling
+.froggy-icon {
+  margin-left: 0.25em;
+  margin-right: 0.25em;
+  font-size: 1em;
+}
+
+// Dropdown item styling for froggy button
+.froggy_button {
+  cursor: pointer;
+}

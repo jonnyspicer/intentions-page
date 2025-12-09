@@ -7,7 +7,7 @@ from intentions_page.models import Intention, Note, IntentionsDraft
 class IntentionEditForm(forms.ModelForm):
 	class Meta:
 		model = Intention
-		fields = ('completed','neverminded','sticky')
+		fields = ('completed','neverminded','sticky','froggy')
 
 class IntentionsDraftEditForm(forms.ModelForm):
 	def __init__(self, *args, **kwargs):
