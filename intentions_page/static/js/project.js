@@ -1,3 +1,50 @@
+// ===== DARK MODE FUNCTIONALITY =====
+
+function getSystemThemePreference() {
+    if (window.matchMedia) {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'light';
+}
+
+function getThemePreference() {
+    const stored = localStorage.getItem('theme_preference');
+    if (stored) return stored;
+    return getSystemThemePreference();
+}
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const toggleIcon = document.getElementById('theme-toggle-icon');
+    if (toggleIcon) {
+        toggleIcon.className = theme === 'dark' ? 'bi bi-sun' : 'bi bi-moon';
+    }
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    localStorage.setItem('theme_preference', newTheme);
+    applyTheme(newTheme);
+}
+
+// Initialize theme immediately (prevents flash)
+(function initializeTheme() {
+    const theme = getThemePreference();
+    applyTheme(theme);
+})();
+
+// Listen for system preference changes
+if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+        if (!localStorage.getItem('theme_preference')) {
+            applyTheme(e.matches ? 'dark' : 'light');
+        }
+    });
+}
+
+// ===== END DARK MODE FUNCTIONALITY =====
+
 // JQuery
 function doThisOnDocumentReady(){
 
@@ -8,6 +55,12 @@ $(".form-disable-on-submit").on('submit', function (event){
     submitButton.attr('disabled',true)
     submitButton.text('Wait...')
 })
+
+// Theme toggle button handler
+$('#theme-toggle-btn').on('click', function(e) {
+    e.preventDefault();
+    toggleTheme();
+});
 
 // Cmd-Enter to submit on today's intentions draft
 // Notice that we don't submit on the form that received the shortcut, we submit promote_draft_to_intentions_form.
