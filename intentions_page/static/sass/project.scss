@@ -494,3 +494,24 @@ input[name="froggy"] {
 .froggy_button {
   cursor: pointer;
 }
+
+// ================================
+// ANXIETY-INDUCING INTENTIONS
+// ================================
+
+// Hide anxiety_inducing checkbox input
+input[name="anxiety_inducing"] {
+  display: none;
+}
+
+// Lightning bolt emoji styling
+.anxiety-icon {
+  margin-left: 0.25em;
+  margin-right: 0.25em;
+  font-size: 1em;
+}
+
+// Dropdown item styling for anxiety button
+.anxiety_button {
+  cursor: pointer;
+}

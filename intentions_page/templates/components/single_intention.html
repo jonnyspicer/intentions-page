@@ -10,6 +10,9 @@
             {% if intention.froggy %}
                 <span class="froggy-icon">🐸</span>
             {% endif %}
+            {% if intention.anxiety_inducing %}
+                <span class="anxiety-icon">⚡</span>
+            {% endif %}
             {{ intention.title }}
     </label>
 
@@ -44,6 +47,14 @@
                     🐸 Mark as frog
                 {% endif %}
                 {{ intention.edit_form.froggy }}
+            </label>
+            <label class="anxiety_button dropdown-item">
+                {% if intention.anxiety_inducing %}
+                    ⚡ Un-charge
+                {% else %}
+                    ⚡ Mark as charged
+                {% endif %}
+                {{ intention.edit_form.anxiety_inducing }}
             </label>
             <li class="append_button dropdown-item" data-toggle="modal" data-target="#appendTextModal{{ intention.id }}">Append</li>
         </div>
