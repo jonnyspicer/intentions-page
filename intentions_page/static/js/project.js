@@ -346,6 +346,14 @@ function intentionBindHandlers (intention) {
             $('.intention').not(intention).each(function() {
                 $(this).find('input[name=froggy]').prop('checked', false)
                 $(this).find('.froggy-icon').remove()
+                // Update dropdown label to "Mark as frog"
+                var label = $(this).find('.froggy_button')
+                var checkbox = label.find('input[name=froggy]')
+                label.contents().filter(function() {
+                    return this.nodeType === 3; // Text nodes only
+                }).remove()
+                label.prepend('🐸 Mark as frog ')
+                label.append(checkbox)
             })
         }
     })
