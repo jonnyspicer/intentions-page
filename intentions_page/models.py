@@ -21,6 +21,7 @@ class Intention(models.Model):
 
     completed = models.BooleanField(default=False)
     neverminded = models.BooleanField(default=False)
+    sticky = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['created_datetime']
@@ -35,6 +36,35 @@ class Intention(models.Model):
             return 'neverminded'
         else:
             return 'active'
+
+    @classmethod
+    def copy_sticky_intentions_forward(cls, user, from_date, to_date):
+        """Copy sticky intentions from from_date to to_date for a user"""
+        sticky_intentions = cls.objects.filter(
+            creator=user,
+            date=from_date,
+            sticky=True,
+            neverminded=False
+        )
+
+        for intention in sticky_intentions:
+            # Avoid duplicates
+            existing = cls.objects.filter(
+                creator=user,
+                date=to_date,
+                title=intention.title,
+                sticky=True
+            ).exists()
+
+            if not existing:
+                cls.objects.create(
+                    title=intention.title,
+                    date=to_date,
+                    creator=user,
+                    sticky=True,
+                    completed=False,
+                    neverminded=False
+                )
 
 class IntentionsDraft(models.Model):
     content = models.TextField()

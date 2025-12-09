@@ -4,6 +4,9 @@
 
     <label class="intention_title">
             <span class="complete_check">{{ intention.edit_form.completed }}</span>
+            {% if intention.sticky %}
+                <i class="bi bi-pin-fill sticky-icon"></i>
+            {% endif %}
             {{ intention.title }}
     </label>
 
@@ -23,6 +26,14 @@
                     {{ intention.edit_form.neverminded }}
                 </label>
             {% endif %}
+            <label class="sticky_button dropdown-item">
+                {% if intention.sticky %}
+                    <i class="bi bi-pin-fill"></i> Un-sticky
+                {% else %}
+                    <i class="bi bi-pin"></i> Make sticky
+                {% endif %}
+                {{ intention.edit_form.sticky }}
+            </label>
             <li class="append_button dropdown-item" data-toggle="modal" data-target="#appendTextModal{{ intention.id }}">Append</li>
         </div>
     </div>

@@ -451,3 +451,25 @@ html, body {
     }
   }
 }
+
+// ================================
+// STICKY INTENTIONS
+// ================================
+
+// Hide sticky checkbox input (like neverminded)
+input[name="sticky"] {
+  display: none;
+}
+
+// Sticky pin icon styling
+.sticky-icon {
+  color: var(--link-color);
+  margin-left: 0.25em;
+  margin-right: 0.25em;
+  font-size: 0.9em;
+}
+
+// Dropdown item styling for sticky button
+.sticky_button {
+  cursor: pointer;
+}
