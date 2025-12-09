@@ -129,15 +129,16 @@ def edit(request, primary_key):
     if request.method == 'POST':
         intention.edit_form = IntentionEditForm(request.POST, instance=intention)
 
-        # Enforce single froggy per day: if marking this as froggy, un-frog others
-        if intention.edit_form.is_valid() and intention.edit_form.cleaned_data.get('froggy'):
-            Intention.objects.filter(
-                creator=request.user,
-                date=intention.date,
-                froggy=True
-            ).exclude(id=intention.id).update(froggy=False)
+        if intention.edit_form.is_valid():
+            # Enforce single froggy per day: if marking this as froggy, un-frog others
+            if intention.edit_form.cleaned_data.get('froggy', False):
+                Intention.objects.filter(
+                    creator=request.user,
+                    date=intention.date,
+                    froggy=True
+                ).exclude(id=intention.id).update(froggy=False)
 
-        intention.edit_form.save()
+            intention.edit_form.save()
 
     return render(request, "components/single_intention.html", context={'intention': intention})
 
