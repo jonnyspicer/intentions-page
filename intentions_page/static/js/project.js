@@ -356,14 +356,19 @@ function intentionBindHandlers (intention) {
                 label.append(checkbox)
             })
 
-            // Move this intention to the top of the list
+            // Animate moving this intention to the top of the list
             var intentionsList = intention.parent()
-            intention.detach().prependTo(intentionsList)
 
-            // Scroll the froggy intention into view
-            intention[0].scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest'
+            // Fade out, move, then fade in
+            intention.fadeOut(200, function() {
+                intention.detach().prependTo(intentionsList)
+                intention.fadeIn(200, function() {
+                    // Scroll the froggy intention into view after animation
+                    intention[0].scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest'
+                    })
+                })
             })
         }
     })
