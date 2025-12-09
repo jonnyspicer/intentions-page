@@ -394,10 +394,9 @@ function intentionEditAJAX(form, intention){
             if (isFroggy) {
                 var intentionsList = intention.parent()
 
-                // Create a placeholder to maintain container height
-                var placeholder = $('<div class="intention-placeholder"></div>')
-                placeholder.height(intention.outerHeight())
-                placeholder.insertAfter(intention)
+                // Lock container height to prevent jumps
+                var containerHeight = intentionsList.height()
+                intentionsList.css('min-height', containerHeight + 'px')
 
                 // Fade out and slide up in current position
                 intention.fadeOut(200).slideUp(200, function() {
@@ -410,18 +409,16 @@ function intentionEditAJAX(form, intention){
                     // Re-bind handlers
                     intentionBindHandlers(nodes)
 
-                    // Slide down new intention and slide up placeholder SIMULTANEOUSLY
+                    // Slide down and fade in at new position
                     nodes.hide().slideDown(200).fadeIn(200, function() {
+                        // Unlock container height after animation completes
+                        intentionsList.css('min-height', '')
+
                         // Scroll into view after animation completes
                         nodes[0].scrollIntoView({
                             behavior: 'smooth',
                             block: 'nearest'
                         })
-                    })
-
-                    // Start placeholder collapse at the same time
-                    placeholder.slideUp(200, function() {
-                        placeholder.remove()
                     })
                 })
             } else {
