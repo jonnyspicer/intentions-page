@@ -410,18 +410,18 @@ function intentionEditAJAX(form, intention){
                     // Re-bind handlers
                     intentionBindHandlers(nodes)
 
-                    // Slide down and fade in at new position
-                    nodes.hide().slideDown(200, function() {
-                        // Remove placeholder as we finish expanding
-                        placeholder.slideUp(200, function() {
-                            placeholder.remove()
-                        })
-                    }).fadeIn(200, function() {
+                    // Slide down new intention and slide up placeholder SIMULTANEOUSLY
+                    nodes.hide().slideDown(200).fadeIn(200, function() {
                         // Scroll into view after animation completes
                         nodes[0].scrollIntoView({
                             behavior: 'smooth',
                             block: 'nearest'
                         })
+                    })
+
+                    // Start placeholder collapse at the same time
+                    placeholder.slideUp(200, function() {
+                        placeholder.remove()
                     })
                 })
             } else {
