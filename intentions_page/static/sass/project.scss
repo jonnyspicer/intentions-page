@@ -1,37 +1,453 @@
+// ================================
+// CSS CUSTOM PROPERTIES (VARIABLES)
+// ================================
 
+:root {
+  // Backgrounds
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
 
+  // Text
+  --text-primary: #000000;
+  --text-secondary: #6c757d;
+  --text-muted: #999999;
 
+  // Alerts (existing colors)
+  --mint-green: #d6e9c6;
+  --pink: #f2dede;
+  --dark-pink: #eed3d7;
+  --red: #b94a48;
 
-// project specific CSS goes here
+  // Interactive
+  --link-color: #007bff;
+  --hover-bg: rgba(10, 121, 247, 0.2);
+  --focus-bg: rgba(247, 101, 10, 0.2);
+  --border-color: #dee2e6;
 
-////////////////////////////////
-		//Variables//
-////////////////////////////////
+  // Bootstrap components
+  --navbar-bg: #f8f9fa;
+  --navbar-text: #000000;
+  --navbar-border: #dee2e6;
+  --footer-bg: #f5f5f5;
+  --footer-text: #212529;
+  --modal-bg: #ffffff;
+  --modal-border: #dee2e6;
+  --dropdown-bg: #ffffff;
+  --dropdown-text: #212529;
+  --dropdown-hover-bg: #f8f9fa;
+  --btn-secondary-bg: transparent;
+  --btn-secondary-text: #000000;
+  --btn-secondary-border: transparent;
+  --form-control-bg: #ffffff;
+  --form-control-text: #495057;
+  --form-control-border: #ced4da;
+  --form-control-placeholder: #6c757d;
+}
 
-// Alert colors
+// ================================
+// DARK MODE OVERRIDES
+// ================================
 
-$white: #fff;
-$mint-green: #d6e9c6;
-$black: #000;
-$pink: #f2dede;
-$dark-pink: #eed3d7;
-$red: #b94a48;
+[data-theme="dark"] {
+  // Backgrounds
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --bg-tertiary: #3a3a3a;
 
-////////////////////////////////
-		//Alerts//
-////////////////////////////////
+  // Text
+  --text-primary: #e4e4e4;
+  --text-secondary: #b0b0b0;
+  --text-muted: #808080;
 
-// bootstrap alert CSS, translated to the django-standard levels of
-// debug, info, success, warning, error
+  // Alerts
+  --mint-green: #4a7c59;
+  --pink: #6b3a3a;
+  --dark-pink: #7d4d4d;
+  --red: #e57373;
+
+  // Interactive
+  --link-color: #6db3f2;
+  --hover-bg: rgba(107, 169, 247, 0.15);
+  --focus-bg: rgba(255, 152, 48, 0.15);
+  --border-color: #4a4a4a;
+
+  // Bootstrap components
+  --navbar-bg: #2d2d2d;
+  --navbar-text: #e4e4e4;
+  --navbar-border: #4a4a4a;
+  --footer-bg: #1f1f1f;
+  --footer-text: #e4e4e4;
+  --modal-bg: #2d2d2d;
+  --modal-border: #4a4a4a;
+  --dropdown-bg: #3a3a3a;
+  --dropdown-text: #e4e4e4;
+  --dropdown-hover-bg: #4a4a4a;
+  --btn-secondary-bg: #3a3a3a;
+  --btn-secondary-text: #e4e4e4;
+  --btn-secondary-border: #4a4a4a;
+  --form-control-bg: #2d2d2d;
+  --form-control-text: #e4e4e4;
+  --form-control-border: #4a4a4a;
+  --form-control-placeholder: #808080;
+
+  // Meta directive for native form controls
+  color-scheme: dark;
+}
+
+// ================================
+// GLOBAL STYLES
+// ================================
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+a {
+  color: var(--link-color);
+}
+
+// ================================
+// ALERTS
+// ================================
 
 .alert-debug {
-  background-color: $white;
-  border-color: $mint-green;
-  color: $black;
+  background-color: var(--mint-green);
+  border-color: var(--mint-green);
+  color: var(--text-primary);
 }
 
 .alert-error {
-  background-color: $pink;
-  border-color: $dark-pink;
-  color: $red;
+  background-color: var(--pink);
+  border-color: var(--dark-pink);
+  color: var(--red);
+}
+
+// ================================
+// BOOTSTRAP COMPONENT OVERRIDES
+// ================================
+
+// Navbar
+.navbar {
+  background-color: var(--navbar-bg) !important;
+  border-color: var(--navbar-border);
+  margin-bottom: 0.5rem;
+
+  .navbar-brand,
+  .nav-link {
+    color: var(--navbar-text) !important;
+  }
+
+  .navbar-brand .text-muted {
+    color: var(--text-secondary) !important;
+  }
+}
+
+// Theme toggle button styling
+#theme-toggle-btn {
+  color: var(--navbar-text);
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+
+  &:hover {
+    color: var(--link-color);
+    background: transparent;
+  }
+
+  &:focus {
+    box-shadow: none;
+  }
+}
+
+// Footer
+.footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 60px;
+  line-height: 60px;
+  background-color: var(--footer-bg);
+  color: var(--footer-text);
+}
+
+// Modals
+.modal-content {
+  background-color: var(--modal-bg);
+  border-color: var(--modal-border);
+  color: var(--text-primary);
+}
+
+.modal-header,
+.modal-footer {
+  border-color: var(--border-color);
+}
+
+// Dropdowns
+.dropdown-menu {
+  background-color: var(--dropdown-bg);
+  border-color: var(--border-color);
+}
+
+.dropdown-item {
+  color: var(--dropdown-text);
+
+  &:hover,
+  &:focus {
+    background-color: var(--dropdown-hover-bg);
+    color: var(--dropdown-text);
+  }
+}
+
+// Buttons
+.btn-secondary {
+  background-color: var(--btn-secondary-bg);
+  border-color: var(--btn-secondary-border);
+  color: var(--btn-secondary-text);
+
+  &:hover {
+    background-color: var(--bg-tertiary);
+    border-color: var(--border-color);
+  }
+}
+
+.btn-outline-secondary {
+  color: var(--text-primary);
+  border-color: var(--border-color);
+
+  &:hover {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+}
+
+// Forms
+.form-control {
+  background-color: var(--form-control-bg);
+  color: var(--form-control-text);
+  border-color: var(--form-control-border);
+
+  &:focus {
+    background-color: var(--form-control-bg);
+    color: var(--form-control-text);
+    border-color: var(--link-color);
+  }
+
+  &::placeholder {
+    color: var(--form-control-placeholder);
+  }
+}
+
+textarea.form-control {
+  background-color: var(--form-control-bg);
+  color: var(--form-control-text);
+  resize: both;
+}
+
+// ================================
+// COMPONENT-SPECIFIC STYLES
+// ================================
+
+#application {
+  margin: .5em;
+}
+
+.today-intentions-draft form {
+  display: flex;
+  margin-top: 1em;
+}
+
+.today-intentions-draft .intentions-draft-fields {
+  width: 100%;
+}
+
+.today-intentions-draft button {
+  height: 100%;
+}
+
+.intention[status='completed'] .intention_title {
+  text-decoration: line-through;
+}
+
+.intention[status='neverminded'] .intention_title {
+  text-decoration: line-through;
+  opacity: 0.5;
+  color: var(--red);
+  pointer-events: none;
+}
+
+.intention[status='neverminded'] .complete_check {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+input[name="neverminded"] {
+  display: none;
+}
+
+.intention:hover {
+  background-color: var(--hover-bg);
+}
+
+.intention form {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.intention_title {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.intention_buttons .dropdown-toggle,
+.intention_title {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.day {
+  margin-bottom: 1em;
+}
+
+.intention_list,
+.today-intentions-draft,
+.notes-accordion,
+.tomorrow-intentions-draft-accordion {
+  max-width: 50em;
+}
+
+.intention_list {
+  margin-bottom: 1rem;
+}
+
+// Customize Bootstrap dropdown-toggle for intentions
+.intention .dropdown-toggle {
+  background-color: transparent;
+  border: transparent;
+  color: var(--text-primary);
+
+  &::after {
+    display: none;
+  }
+}
+
+.intentions_brand {
+  font-weight: bolder;
+}
+
+.intention_list [has_keyboard_focus] {
+  background-color: var(--focus-bg);
+}
+
+html, body {
+  height: 100%;
+}
+
+#page_wrapper {
+  position: relative;
+  min-height: 100%;
+}
+
+#_content {
+  padding-bottom: 120px;
+}
+
+@media (hover: none) {
+  #keyboardShortcutLink {
+    display: none;
+  }
+}
+
+#keyboardShortcutModal td,
+#keyboardShortcutModal th {
+  padding-bottom: 0;
+  padding-top: 0;
+}
+
+.footer .container > * {
+  margin-right: 1em;
+}
+
+.notes-accordion {
+  border: none;
+}
+
+.notesLink,
+.tomorrowEditLink {
+  cursor: pointer;
+  border: none;
+}
+
+.notes-edit-form .form-group {
+  margin-bottom: 0;
+}
+
+.login-or {
+  margin-bottom: 1rem;
+  margin-top: 1rem;
+  font-weight: bold;
+}
+
+.socialaccount_providers li {
+  list-style: none;
+}
+
+.socialaccount_logo {
+  height: 1.5rem;
+  vertical-align: bottom;
+}
+
+#privacyPolicyLink {
+  color: var(--text-primary);
+}
+
+// ================================
+// DARK MODE SPECIFIC REFINEMENTS
+// ================================
+
+[data-theme="dark"] {
+  // Make sure images/icons don't appear too bright
+  img {
+    opacity: 0.9;
+  }
+
+  // Adjust borders to be more visible
+  .card,
+  .modal-content,
+  .dropdown-menu {
+    border-width: 1px;
+  }
+
+  // Ensure table styles work in dark mode
+  .table {
+    color: var(--text-primary);
+
+    thead th {
+      border-bottom-color: var(--border-color);
+    }
+
+    td, th {
+      border-top-color: var(--border-color);
+    }
+  }
+
+  .table-striped tbody tr:nth-of-type(odd) {
+    background-color: var(--bg-secondary);
+  }
+
+  // Close buttons in modals
+  .close {
+    color: var(--text-primary);
+    text-shadow: none;
+    opacity: 0.8;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
 }

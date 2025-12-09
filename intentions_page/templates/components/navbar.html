@@ -20,6 +20,11 @@
             </li>
           </ul>
 
+          <!-- Theme Toggle -->
+          <button id="theme-toggle-btn" class="btn btn-link nav-link" aria-label="Toggle dark mode" title="Toggle dark mode">
+            <i id="theme-toggle-icon" class="bi bi-moon"></i>
+          </button>
+
           <ul class="navbar-nav">
             {% if request.user.is_authenticated %}
               <li class="nav-item dropdown navbar-right">
