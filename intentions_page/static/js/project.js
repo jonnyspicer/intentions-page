@@ -394,6 +394,11 @@ function intentionEditAJAX(form, intention){
             if (isFroggy) {
                 var intentionsList = intention.parent()
 
+                // Create a placeholder to maintain container height
+                var placeholder = $('<div class="intention-placeholder"></div>')
+                placeholder.height(intention.outerHeight())
+                placeholder.insertAfter(intention)
+
                 // Fade out and slide up in current position
                 intention.fadeOut(200).slideUp(200, function() {
                     // Replace with new HTML (while invisible and collapsed)
@@ -406,7 +411,12 @@ function intentionEditAJAX(form, intention){
                     intentionBindHandlers(nodes)
 
                     // Slide down and fade in at new position
-                    nodes.hide().slideDown(200).fadeIn(200, function() {
+                    nodes.hide().slideDown(200, function() {
+                        // Remove placeholder as we finish expanding
+                        placeholder.slideUp(200, function() {
+                            placeholder.remove()
+                        })
+                    }).fadeIn(200, function() {
                         // Scroll into view after animation completes
                         nodes[0].scrollIntoView({
                             behavior: 'smooth',
