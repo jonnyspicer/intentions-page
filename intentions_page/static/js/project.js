@@ -270,6 +270,13 @@ Mousetrap.bind('g', function (e) {
     }
 })
 
+Mousetrap.bind('z', function (e) {
+    var has_focus = $('.intention_list').find('[has_keyboard_focus]')
+    if (has_focus.length){
+        has_focus.find('.anxiety_button').click()
+    }
+})
+
 Mousetrap.bind('?', function (e) {
     $('#keyboardShortcutModal').modal('toggle')
 })
@@ -387,45 +394,9 @@ function intentionEditAJAX(form, intention){
             nodes = $.parseHTML(data)
             nodes = $(nodes)
 
-            // Check if this intention is now froggy
-            var isFroggy = nodes.find('input[name=froggy]').prop('checked')
-
-            // If marked as froggy, animate the move smoothly
-            if (isFroggy) {
-                var intentionsList = intention.parent()
-
-                // Lock container height to prevent jumps
-                var containerHeight = intentionsList.height()
-                intentionsList.css('min-height', containerHeight + 'px')
-
-                // Fade out and slide up in current position
-                intention.fadeOut(200).slideUp(200, function() {
-                    // Replace with new HTML (while invisible and collapsed)
-                    intention.replaceWith(nodes)
-
-                    // Move to top (still invisible and collapsed)
-                    nodes.detach().prependTo(intentionsList)
-
-                    // Re-bind handlers
-                    intentionBindHandlers(nodes)
-
-                    // Slide down and fade in at new position
-                    nodes.hide().slideDown(200).fadeIn(200, function() {
-                        // Unlock container height after animation completes
-                        intentionsList.css('min-height', '')
-
-                        // Scroll into view after animation completes
-                        nodes[0].scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'nearest'
-                        })
-                    })
-                })
-            } else {
-                // Not froggy, just replace normally
-                intention.replaceWith(nodes)
-                intentionBindHandlers(nodes)
-            }
+            // Replace intention with updated HTML
+            intention.replaceWith(nodes)
+            intentionBindHandlers(nodes)
 
             // If the intention we updated with Ajax had focus, it will have lost focus
             getFocusFromLocalStorage()

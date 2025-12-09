@@ -400,4 +400,18 @@ input[name=froggy] {
   cursor: pointer;
 }
 
+input[name=anxiety_inducing] {
+  display: none;
+}
+
+.anxiety-icon {
+  margin-left: 0.25em;
+  margin-right: 0.25em;
+  font-size: 1em;
+}
+
+.anxiety_button {
+  cursor: pointer;
+}
+
 /*# sourceMappingURL=project.css.map */
