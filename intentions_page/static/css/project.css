@@ -386,4 +386,18 @@ input[name=sticky] {
   cursor: pointer;
 }
 
+input[name=froggy] {
+  display: none;
+}
+
+.froggy-icon {
+  margin-left: 0.25em;
+  margin-right: 0.25em;
+  font-size: 1em;
+}
+
+.froggy_button {
+  cursor: pointer;
+}
+
 /*# sourceMappingURL=project.css.map */

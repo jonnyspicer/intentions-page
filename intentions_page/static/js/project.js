@@ -263,6 +263,13 @@ Mousetrap.bind('s', function (e) {
     }
 })
 
+Mousetrap.bind('g', function (e) {
+    var has_focus = $('.intention_list').find('[has_keyboard_focus]')
+    if (has_focus.length){
+        has_focus.find('.froggy_button').click()
+    }
+})
+
 Mousetrap.bind('?', function (e) {
     $('#keyboardShortcutModal').modal('toggle')
 })
@@ -331,6 +338,30 @@ function intentionBindHandlers (intention) {
         }
     })
 
+    $(intention).find('input[name=froggy]').on('change', function (e) {
+        checked = $(e.target).prop('checked')
+        intention = $(e.target).closest('.intention')
+        if (checked) {
+            // Un-frog all other intentions (only one can be froggy)
+            $('.intention').not(intention).each(function() {
+                $(this).find('input[name=froggy]').prop('checked', false)
+
+                // Fade out the froggy icon smoothly
+                $(this).find('.froggy-icon').fadeOut(200, function() {
+                    $(this).remove()
+                })
+
+                // Update dropdown label to "Mark as frog"
+                var label = $(this).find('.froggy_button')
+                var checkbox = label.find('input[name=froggy]')
+                label.contents().filter(function() {
+                    return this.nodeType === 3; // Text nodes only
+                }).remove()
+                label.prepend('🐸 Mark as frog ')
+                label.append(checkbox)
+            })
+        }
+    })
 
     $(intention).find('.intention-edit-form').on('change', function(e) {
         form = $(e.target).closest('form')
@@ -356,11 +387,45 @@ function intentionEditAJAX(form, intention){
             nodes = $.parseHTML(data)
             nodes = $(nodes)
 
-            // re-writes the intention
-            intention.replaceWith(nodes)
+            // Check if this intention is now froggy
+            var isFroggy = nodes.find('input[name=froggy]').prop('checked')
 
-            // re-bind handlers
-            intentionBindHandlers(nodes)
+            // If marked as froggy, animate the move smoothly
+            if (isFroggy) {
+                var intentionsList = intention.parent()
+
+                // Lock container height to prevent jumps
+                var containerHeight = intentionsList.height()
+                intentionsList.css('min-height', containerHeight + 'px')
+
+                // Fade out and slide up in current position
+                intention.fadeOut(200).slideUp(200, function() {
+                    // Replace with new HTML (while invisible and collapsed)
+                    intention.replaceWith(nodes)
+
+                    // Move to top (still invisible and collapsed)
+                    nodes.detach().prependTo(intentionsList)
+
+                    // Re-bind handlers
+                    intentionBindHandlers(nodes)
+
+                    // Slide down and fade in at new position
+                    nodes.hide().slideDown(200).fadeIn(200, function() {
+                        // Unlock container height after animation completes
+                        intentionsList.css('min-height', '')
+
+                        // Scroll into view after animation completes
+                        nodes[0].scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'nearest'
+                        })
+                    })
+                })
+            } else {
+                // Not froggy, just replace normally
+                intention.replaceWith(nodes)
+                intentionBindHandlers(nodes)
+            }
 
             // If the intention we updated with Ajax had focus, it will have lost focus
             getFocusFromLocalStorage()

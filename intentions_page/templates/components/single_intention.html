@@ -7,6 +7,9 @@
             {% if intention.sticky %}
                 <i class="bi bi-pin-fill sticky-icon"></i>
             {% endif %}
+            {% if intention.froggy %}
+                <span class="froggy-icon">🐸</span>
+            {% endif %}
             {{ intention.title }}
     </label>
 
@@ -33,6 +36,14 @@
                     <i class="bi bi-pin"></i> Make sticky
                 {% endif %}
                 {{ intention.edit_form.sticky }}
+            </label>
+            <label class="froggy_button dropdown-item">
+                {% if intention.froggy %}
+                    🐸 Un-frog
+                {% else %}
+                    🐸 Mark as frog
+                {% endif %}
+                {{ intention.edit_form.froggy }}
             </label>
             <li class="append_button dropdown-item" data-toggle="modal" data-target="#appendTextModal{{ intention.id }}">Append</li>
         </div>
