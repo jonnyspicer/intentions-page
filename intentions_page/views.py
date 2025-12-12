@@ -255,20 +255,97 @@ def build_intentions_context(user, include_history_days=7):
 
     return "\n".join(context_lines)
 
+def prepare_messages_for_llm(chat_messages):
+    """
+    Convert ChatMessage objects to format expected by LLM API.
+    Handles both plain text and JSON-structured messages.
+    """
+    llm_messages = []
+
+    for msg in chat_messages:
+        if msg.role == 'system':
+            continue  # System messages handled separately
+
+        # Try to parse content as JSON
+        try:
+            content_data = json.loads(msg.content)
+
+            if isinstance(content_data, dict) and 'content_blocks' in content_data:
+                # Message with tool use
+                llm_messages.append({
+                    'role': msg.role,
+                    'content': content_data['content_blocks']
+                })
+            elif isinstance(content_data, dict) and content_data.get('type') == 'tool_result':
+                # Tool result message
+                llm_messages.append({
+                    'role': 'user',
+                    'content': [{
+                        'type': 'tool_result',
+                        'tool_use_id': content_data['tool_use_id'],
+                        'content': json.dumps(content_data['content']),
+                        'is_error': content_data.get('is_error', False)
+                    }]
+                })
+            else:
+                # Unknown JSON, treat as text
+                llm_messages.append({
+                    'role': msg.role,
+                    'content': msg.content
+                })
+        except (json.JSONDecodeError, ValueError, TypeError):
+            # Plain text message (backward compatible)
+            llm_messages.append({
+                'role': msg.role,
+                'content': msg.content
+            })
+
+    return llm_messages
+
 @login_required
 def chat_history(request):
     """Return chat history as JSON."""
     messages = ChatMessage.objects.filter(creator=request.user)
-    messages_data = [
-        {
-            'id': msg.id,
-            'role': msg.role,
-            'content': msg.content,
-            'created_datetime': msg.created_datetime.isoformat(),
-            'llm_provider': msg.llm_provider
-        }
-        for msg in messages
-    ]
+    messages_data = []
+
+    for msg in messages:
+        # Try to parse structured content
+        try:
+            content_data = json.loads(msg.content)
+            if isinstance(content_data, dict) and 'tool_executions' in content_data:
+                # Extract display text from content blocks
+                display_text = ""
+                for block in content_data.get('content_blocks', []):
+                    if block.get('type') == 'text':
+                        display_text += block.get('text', '')
+
+                messages_data.append({
+                    'id': msg.id,
+                    'role': msg.role,
+                    'content': display_text,
+                    'created_datetime': msg.created_datetime.isoformat(),
+                    'llm_provider': msg.llm_provider,
+                    'tool_executions': content_data.get('tool_executions', [])
+                })
+            else:
+                # Regular message
+                messages_data.append({
+                    'id': msg.id,
+                    'role': msg.role,
+                    'content': msg.content,
+                    'created_datetime': msg.created_datetime.isoformat(),
+                    'llm_provider': msg.llm_provider
+                })
+        except (json.JSONDecodeError, ValueError, TypeError):
+            # Plain text message
+            messages_data.append({
+                'id': msg.id,
+                'role': msg.role,
+                'content': msg.content,
+                'created_datetime': msg.created_datetime.isoformat(),
+                'llm_provider': msg.llm_provider
+            })
+
     return JsonResponse({'messages': messages_data})
 
 @login_required
@@ -310,29 +387,38 @@ def chat_send_message(request):
             creator=request.user
         ).order_by('-created_datetime')[:20]
 
-        llm_messages = [
-            {'role': msg.role, 'content': msg.content}
-            for msg in reversed(recent_messages)
-        ]
+        llm_messages = prepare_messages_for_llm(reversed(recent_messages))
 
         # Get intentions context if requested
         intentions_context = None
         if include_intentions:
-            intentions_context = build_intentions_context(request.user)
+            intentions_context = build_intentions_context(request.user, include_history_days=0)
 
-        # Get LLM response
+        # Get LLM response with tool support
         from intentions_page.llm_service import LLMService
         llm_service = LLMService()
-        response_text, provider_used = llm_service.get_completion(
+        response_dict, provider_used = llm_service.get_completion_with_tools(
             llm_messages,
-            intentions_context
+            intentions_context,
+            user=request.user
         )
 
         # Save assistant response
+        if response_dict.get('tool_executions'):
+            # Store structured response with tool executions
+            assistant_content = json.dumps({
+                'type': 'assistant',
+                'content_blocks': response_dict.get('content_blocks', []),
+                'tool_executions': response_dict['tool_executions']
+            })
+        else:
+            # Store plain text (backward compatible)
+            assistant_content = response_dict['content']
+
         assistant_msg = ChatMessage.objects.create(
             creator=request.user,
             role='assistant',
-            content=response_text,
+            content=assistant_content,
             llm_provider=provider_used
         )
 
@@ -346,9 +432,10 @@ def chat_send_message(request):
             'assistant_message': {
                 'id': assistant_msg.id,
                 'role': assistant_msg.role,
-                'content': assistant_msg.content,
+                'content': response_dict['content'],
                 'created_datetime': assistant_msg.created_datetime.isoformat(),
-                'llm_provider': assistant_msg.llm_provider
+                'llm_provider': assistant_msg.llm_provider,
+                'tool_executions': response_dict.get('tool_executions', [])
             }
         })
 

@@ -311,3 +311,47 @@ ANTHROPIC_API_KEY = env('ANTHROPIC_API_KEY', default=None)
 OPENAI_API_KEY = env('OPENAI_API_KEY', default=None)
 LLM_MAX_MESSAGES_PER_DAY = env.int('LLM_MAX_MESSAGES_PER_DAY', default=50)
 LLM_MAX_TOKENS_PER_REQUEST = env.int('LLM_MAX_TOKENS_PER_REQUEST', default=1000)
+
+# Tool calling logging
+# ------------------------------------------------------------------------------
+import os
+
+# Create logs directory if it doesn't exist
+LOGS_DIR = os.path.join(str(ROOT_DIR), 'logs')
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {funcName} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'tools_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOGS_DIR, 'tools.log'),
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'intentions_page.tools': {
+            'handlers': ['tools_file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'intentions_page.llm_service': {
+            'handlers': ['tools_file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
