@@ -1,0 +1,63 @@
+{% load static %}
+
+<!-- Chat Sidebar -->
+<div id="chat-sidebar" class="chat-sidebar" data-visible="false">
+    <!-- Sidebar Header -->
+    <div class="chat-sidebar-header">
+        <h5 class="chat-sidebar-title">AI Assistant</h5>
+        <button id="chat-close-btn" class="btn btn-sm btn-link" aria-label="Close chat">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+
+    <!-- Chat Messages Container -->
+    <div id="chat-messages" class="chat-messages">
+        <div class="chat-welcome">
+            <p>Hello! I can help you with:</p>
+            <ul>
+                <li>Prioritizing your tasks</li>
+                <li>Breaking down complex intentions</li>
+                <li>Time management suggestions</li>
+                <li>Identifying task dependencies</li>
+            </ul>
+            <p class="text-muted small">Your intentions are automatically included as context.</p>
+        </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="chat-loading" class="chat-loading" style="display: none;">
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+        <span class="ml-2">Thinking...</span>
+    </div>
+
+    <!-- Chat Input -->
+    <div class="chat-input-container">
+        <div class="chat-controls">
+            <label class="chat-checkbox-label">
+                <input type="checkbox" id="chat-include-intentions" checked>
+                <span class="small">Include intentions as context</span>
+            </label>
+            <button id="chat-clear-btn" class="btn btn-sm btn-link text-muted" title="Clear history">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+        <div class="chat-input-wrapper">
+            <textarea
+                id="chat-input"
+                class="form-control chat-input"
+                placeholder="Ask me anything..."
+                rows="2"
+            ></textarea>
+            <button id="chat-send-btn" class="btn btn-primary chat-send-btn">
+                <i class="bi bi-send"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Chat Toggle Button (Fixed Position) -->
+<button id="chat-toggle-btn" class="btn btn-primary chat-toggle-btn" aria-label="Toggle chat">
+    <i class="bi bi-chat-dots"></i>
+</button>

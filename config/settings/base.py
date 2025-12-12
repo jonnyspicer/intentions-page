@@ -68,6 +68,7 @@ DJANGO_APPS = [
 ]
 THIRD_PARTY_APPS = [
     "crispy_forms",
+    "crispy_bootstrap4",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -301,3 +302,12 @@ REST_FRAMEWORK = {
 CORS_URLS_REGEX = r"^/api/.*$"
 # Your stuff...
 # ------------------------------------------------------------------------------
+
+# LLM Configuration
+# ------------------------------------------------------------------------------
+LLM_PRIMARY_PROVIDER = env('LLM_PRIMARY_PROVIDER', default='claude')
+LLM_FALLBACK_ENABLED = env.bool('LLM_FALLBACK_ENABLED', default=True)
+ANTHROPIC_API_KEY = env('ANTHROPIC_API_KEY', default=None)
+OPENAI_API_KEY = env('OPENAI_API_KEY', default=None)
+LLM_MAX_MESSAGES_PER_DAY = env.int('LLM_MAX_MESSAGES_PER_DAY', default=50)
+LLM_MAX_TOKENS_PER_REQUEST = env.int('LLM_MAX_TOKENS_PER_REQUEST', default=1000)
