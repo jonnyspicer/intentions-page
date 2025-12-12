@@ -117,7 +117,6 @@
         .then(data => {
             setLoading(false);
 
-            // Assistant response with potential tool executions
             appendMessage(
                 'assistant',
                 data.assistant_message.content,
@@ -127,14 +126,12 @@
 
             scrollToBottom();
 
-            // Check if create_intention tool was successfully executed
             if (data.assistant_message.tool_executions) {
                 const hasCreatedIntention = data.assistant_message.tool_executions.some(
                     exec => exec.tool_name === 'create_intention' && exec.success
                 );
 
                 if (hasCreatedIntention) {
-                    // Reload the page after a short delay to show the message first
                     setTimeout(() => {
                         window.location.reload();
                     }, 1500);
@@ -148,9 +145,7 @@
         });
     }
 
-    // Append message to chat
     function appendMessage(role, content, animate = false, toolExecutions = null) {
-        // Remove welcome message when first real message appears
         const welcome = chatMessages.querySelector('.chat-welcome');
         if (welcome && role !== 'system') {
             welcome.remove();
@@ -159,7 +154,6 @@
         const messageDiv = document.createElement('div');
         messageDiv.className = `chat-message chat-message-${role}`;
 
-        // Add tool execution indicators if present
         if (toolExecutions && toolExecutions.length > 0) {
             const toolsDiv = document.createElement('div');
             toolsDiv.className = 'chat-tools-used';
@@ -189,7 +183,6 @@
             messageDiv.appendChild(toolsDiv);
         }
 
-        // Format content
         let formattedContent;
         if (role === 'assistant' && typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
             const rawHtml = marked.parse(content);

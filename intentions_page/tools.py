@@ -1,17 +1,6 @@
-"""
-Tool calling framework for LLM agent capabilities.
-
-This module provides the infrastructure for defining and executing tools
-that the LLM can call to interact with the application.
-"""
-
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-# Tool Registry
-# ------------------------------------------------------------------------------
 
 def create_intention_executor(tool_input, user=None):
     """
@@ -30,14 +19,12 @@ def create_intention_executor(tool_input, user=None):
     from intentions_page.models import Intention, get_working_day_date
     from django.utils.dateparse import parse_date
 
-    # Validate title
     title = tool_input.get('title', '').strip()
     if not title:
         raise ValueError("Title is required and cannot be empty")
     if len(title) > 500:
         raise ValueError("Title cannot exceed 500 characters")
 
-    # Parse date
     date_str = tool_input.get('date')
     if date_str:
         intention_date = parse_date(date_str)
@@ -50,7 +37,6 @@ def create_intention_executor(tool_input, user=None):
     sticky = tool_input.get('sticky', False)
     anxiety_inducing = tool_input.get('anxiety_inducing', False)
 
-    # Validate froggy constraint (only one per day)
     if froggy:
         existing_frog = Intention.objects.filter(
             creator=user,
@@ -64,7 +50,6 @@ def create_intention_executor(tool_input, user=None):
                 f"Only one frog per day allowed."
             )
 
-    # Create intention
     intention = Intention.objects.create(
         title=title,
         date=intention_date,
@@ -135,9 +120,6 @@ def get_available_tools():
     return [tool_def['schema'] for tool_def in TOOL_REGISTRY.values()]
 
 
-# Tool Executor
-# ------------------------------------------------------------------------------
-
 class ToolExecutor:
     """Executes tools and manages validation."""
 
@@ -170,7 +152,6 @@ class ToolExecutor:
 
         tool_def = TOOL_REGISTRY[tool_name]
 
-        # Check if user is required but not provided
         if tool_def.get('requires_user') and not self.user:
             return {
                 'success': False,
@@ -179,11 +160,9 @@ class ToolExecutor:
             }
 
         try:
-            # Call the tool's executor function
             executor_func = tool_def['executor']
             result = executor_func(tool_input, user=self.user)
 
-            # Log execution
             self.execution_log.append({
                 'tool_name': tool_name,
                 'input': tool_input,
