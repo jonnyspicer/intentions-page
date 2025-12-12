@@ -90,3 +90,22 @@ class Note(models.Model):
         constraints =[models.UniqueConstraint(fields=['date','creator'],name='One note per user per day')]
 
         ordering = ['-created_datetime']
+
+class ChatMessage(models.Model):
+    ROLE_CHOICES = [
+        ('system', 'System'),
+        ('user', 'User'),
+        ('assistant', 'Assistant'),
+    ]
+
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+    content = models.TextField()
+    created_datetime = models.DateTimeField(default=timezone.now)
+    llm_provider = models.CharField(max_length=20, null=True, blank=True)  # 'claude' or 'openai'
+
+    class Meta:
+        ordering = ['created_datetime']
+
+    def __str__(self):
+        return f"{self.role}: {self.content[:50]}..."

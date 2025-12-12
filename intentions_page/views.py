@@ -1,17 +1,24 @@
 from django.db import transaction
 
 from intentions_page.forms import IntentionEditForm, NoteEditForm, IntentionsDraftEditForm
-from intentions_page.models import Intention, Note, IntentionsDraft
+from intentions_page.models import Intention, Note, IntentionsDraft, ChatMessage
 import django.utils.timezone as timezone
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user
 from django.core.exceptions import PermissionDenied
 from django.core.mail import send_mail
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.conf import settings
+from django.views.decorators.csrf import ensure_csrf_cookie
 from intentions_page.models import get_working_day_date
+import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
+@ensure_csrf_cookie
 def home(request):
     if request.user.is_authenticated:
         working_day_date = get_working_day_date()
@@ -201,3 +208,159 @@ def feedback(request):
 
 def privacy_policy(request):
     return render(request, "privacy-policy.html")
+
+def build_intentions_context(user, include_history_days=7):
+    """Build text summary of user's intentions for LLM context."""
+    from datetime import timedelta
+
+    working_day = get_working_day_date()
+    start_date = working_day - timedelta(days=include_history_days)
+
+    intentions = Intention.objects.filter(
+        creator=user,
+        date__gte=start_date,
+        date__lte=working_day
+    ).order_by('-date', 'created_datetime')
+
+    if not intentions:
+        return "No current intentions."
+
+    # Group by date and format with status markers
+    intentions_by_date = {}
+    for intention in intentions:
+        date_str = intention.date.strftime('%Y-%m-%d (%A)')
+        if date_str not in intentions_by_date:
+            intentions_by_date[date_str] = []
+
+        status = ""
+        if intention.completed:
+            status = "[COMPLETED] "
+        elif intention.neverminded:
+            status = "[NEVERMINDED] "
+        elif intention.sticky:
+            status = "[STICKY] "
+        elif intention.froggy:
+            status = "[FROG - Most Important] "
+        elif intention.anxiety_inducing:
+            status = "[CHARGED] "
+
+        intentions_by_date[date_str].append(f"{status}{intention.title}")
+
+    # Format as text
+    context_lines = []
+    for date_str, items in intentions_by_date.items():
+        context_lines.append(f"\n{date_str}:")
+        for item in items:
+            context_lines.append(f"  - {item}")
+
+    return "\n".join(context_lines)
+
+@login_required
+def chat_history(request):
+    """Return chat history as JSON."""
+    messages = ChatMessage.objects.filter(creator=request.user)
+    messages_data = [
+        {
+            'id': msg.id,
+            'role': msg.role,
+            'content': msg.content,
+            'created_datetime': msg.created_datetime.isoformat(),
+            'llm_provider': msg.llm_provider
+        }
+        for msg in messages
+    ]
+    return JsonResponse({'messages': messages_data})
+
+@login_required
+def chat_send_message(request):
+    """Handle sending message to LLM and getting response."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        user_message = data.get('message', '').strip()
+        include_intentions = data.get('include_intentions', True)
+
+        if not user_message:
+            return JsonResponse({'error': 'Message cannot be empty'}, status=400)
+
+        # Rate limiting
+        today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        messages_today = ChatMessage.objects.filter(
+            creator=request.user,
+            role='user',
+            created_datetime__gte=today_start
+        ).count()
+
+        if messages_today >= settings.LLM_MAX_MESSAGES_PER_DAY:
+            return JsonResponse({
+                'error': f'Daily message limit ({settings.LLM_MAX_MESSAGES_PER_DAY}) reached'
+            }, status=429)
+
+        # Save user message
+        user_msg = ChatMessage.objects.create(
+            creator=request.user,
+            role='user',
+            content=user_message
+        )
+
+        # Get recent conversation history (last 20 messages)
+        recent_messages = ChatMessage.objects.filter(
+            creator=request.user
+        ).order_by('-created_datetime')[:20]
+
+        llm_messages = [
+            {'role': msg.role, 'content': msg.content}
+            for msg in reversed(recent_messages)
+        ]
+
+        # Get intentions context if requested
+        intentions_context = None
+        if include_intentions:
+            intentions_context = build_intentions_context(request.user)
+
+        # Get LLM response
+        from intentions_page.llm_service import LLMService
+        llm_service = LLMService()
+        response_text, provider_used = llm_service.get_completion(
+            llm_messages,
+            intentions_context
+        )
+
+        # Save assistant response
+        assistant_msg = ChatMessage.objects.create(
+            creator=request.user,
+            role='assistant',
+            content=response_text,
+            llm_provider=provider_used
+        )
+
+        return JsonResponse({
+            'user_message': {
+                'id': user_msg.id,
+                'role': user_msg.role,
+                'content': user_msg.content,
+                'created_datetime': user_msg.created_datetime.isoformat()
+            },
+            'assistant_message': {
+                'id': assistant_msg.id,
+                'role': assistant_msg.role,
+                'content': assistant_msg.content,
+                'created_datetime': assistant_msg.created_datetime.isoformat(),
+                'llm_provider': assistant_msg.llm_provider
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Chat error: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def chat_clear_history(request):
+    """Clear all chat history for current user."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    deleted_count, _ = ChatMessage.objects.filter(creator=request.user).delete()
+    return JsonResponse({'deleted_count': deleted_count})
