@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Django checks
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.local
+          DATABASE_URL: sqlite:///db.sqlite3
+        run: |
+          python manage.py check --deploy
+
+      - name: Run tests
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.local
+          DATABASE_URL: sqlite:///db.sqlite3
+        run: |
+          python manage.py test
+
+  claude-code-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python for review
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install anthropic SDK
+        run: pip install anthropic
+
+      - name: Get PR diff
+        id: pr-diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr diff ${{ github.event.pull_request.number }} > pr_diff.txt
+          echo "diff_size=$(wc -c < pr_diff.txt)" >> $GITHUB_OUTPUT
+
+      - name: Review with Claude
+        if: steps.pr-diff.outputs.diff_size > 0
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python .github/scripts/claude_review.py
+
+      - name: Post review comment
+        if: steps.pr-diff.outputs.diff_size > 0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REVIEW_TEXT=$(cat review_output.txt)
+
+          gh pr comment ${{ github.event.pull_request.number }} --body "## 🤖 Claude Code Review
+
+          $REVIEW_TEXT
+
+          ---
+          *Automated review by Claude Sonnet 4.5*"
