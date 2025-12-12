@@ -861,6 +861,55 @@ input[name="anxiety_inducing"] {
   }
 }
 
+// Tool execution badges
+.chat-tools-used {
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chat-tool-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background-color: #f0f0f0;
+}
+
+.chat-tool-badge.success {
+  background-color: #d4edda;
+  color: #155724;
+  border-left: 3px solid #28a745;
+}
+
+.chat-tool-badge.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-left: 3px solid #dc3545;
+}
+
+.chat-tool-badge i {
+  font-size: 1rem;
+}
+
+.chat-tool-badge .tool-name {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.chat-tool-badge .tool-result {
+  color: #666;
+  margin-left: auto;
+  font-size: 0.8rem;
+}
+
+.chat-message-content {
+  margin-top: 4px;
+}
+
 // Dark mode adjustments
 [data-theme=dark] {
   .chat-message-user {
@@ -883,5 +932,23 @@ input[name="anxiety_inducing"] {
     table th {
       background-color: rgba(255, 255, 255, 0.05);
     }
+  }
+
+  .chat-tool-badge {
+    background-color: #2d2d2d;
+  }
+
+  .chat-tool-badge.success {
+    background-color: #1e3a1e;
+    color: #7dcc7d;
+  }
+
+  .chat-tool-badge.error {
+    background-color: #3a1e1e;
+    color: #cc7d7d;
+  }
+
+  .chat-tool-badge .tool-result {
+    color: #aaa;
   }
 }

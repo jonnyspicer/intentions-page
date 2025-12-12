@@ -2,6 +2,7 @@ from django.conf import settings
 from anthropic import Anthropic
 from openai import OpenAI
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,10 @@ class LLMService:
         # Try primary provider
         try:
             if self.primary_provider == 'claude':
-                return self._get_claude_completion(messages), 'claude'
+                response = self._get_claude_completion(messages)
+                # Extract text from structured response for backward compatibility
+                text = response['content'][0].text if isinstance(response, dict) else response
+                return text, 'claude'
             elif self.primary_provider == 'openai':
                 return self._get_openai_completion(messages), 'openai'
         except Exception as e:
@@ -70,7 +74,9 @@ class LLMService:
                 fallback_provider = 'openai' if self.primary_provider == 'claude' else 'claude'
                 try:
                     if fallback_provider == 'claude':
-                        return self._get_claude_completion(messages), 'claude'
+                        response = self._get_claude_completion(messages)
+                        text = response['content'][0].text if isinstance(response, dict) else response
+                        return text, 'claude'
                     else:
                         return self._get_openai_completion(messages), 'openai'
                 except Exception as fallback_error:
@@ -79,20 +85,154 @@ class LLMService:
             else:
                 raise
 
-    def _build_system_message(self, intentions_context):
-        """Build system message with user's intentions context."""
+    def get_completion_with_tools(self, messages, intentions_context=None, user=None):
+        """
+        Get completion with tool calling support.
+        Handles loop: LLM → tool use → execute → result → LLM → response
+
+        Args:
+            messages: Conversation history
+            intentions_context: User's intentions context
+            user: Django User object for tool execution
+
+        Returns:
+            Tuple of (final_response_dict, provider_used)
+        """
+        from intentions_page.tools import get_available_tools, ToolExecutor
+
+        # Build system message
+        system_msg = self._build_system_message(intentions_context, tools_available=True)
+        conversation = [system_msg] + messages
+
+        # Get available tools
+        tools = get_available_tools()
+
+        # Initialize tool executor
+        tool_executor = ToolExecutor(user=user)
+
+        # Tool calling loop (max 5 iterations)
+        max_iterations = 5
+        iteration = 0
+
+        while iteration < max_iterations:
+            iteration += 1
+
+            try:
+                # Call Claude with tools
+                response = self._get_claude_completion(conversation, tools=tools)
+
+                # Check stop reason
+                if response['stop_reason'] == 'end_turn':
+                    # No tool use, extract text and return
+                    text_content = ""
+                    for block in response['content']:
+                        if hasattr(block, 'text'):
+                            text_content += block.text
+
+                    return {
+                        'content': text_content,
+                        'content_blocks': [{'type': 'text', 'text': text_content}],
+                        'tool_executions': tool_executor.execution_log
+                    }, 'claude'
+
+                elif response['stop_reason'] == 'tool_use':
+                    # Extract text and tool use blocks
+                    assistant_content = []
+                    tool_uses = []
+
+                    for block in response['content']:
+                        if hasattr(block, 'text'):
+                            assistant_content.append({'type': 'text', 'text': block.text})
+                        elif hasattr(block, 'name'):  # Tool use block
+                            tool_uses.append({
+                                'type': 'tool_use',
+                                'id': block.id,
+                                'name': block.name,
+                                'input': block.input
+                            })
+                            assistant_content.append({
+                                'type': 'tool_use',
+                                'id': block.id,
+                                'name': block.name,
+                                'input': block.input
+                            })
+
+                    # Add assistant message to conversation
+                    conversation.append({
+                        'role': 'assistant',
+                        'content': assistant_content
+                    })
+
+                    # Execute tools and build results
+                    tool_results = []
+                    for tool_use in tool_uses:
+                        result = tool_executor.execute(tool_use['name'], tool_use['input'])
+
+                        tool_results.append({
+                            'type': 'tool_result',
+                            'tool_use_id': tool_use['id'],
+                            'content': json.dumps(result['result']) if result['success'] else result['error'],
+                            'is_error': not result['success']
+                        })
+
+                    # Add tool results to conversation
+                    conversation.append({
+                        'role': 'user',
+                        'content': tool_results
+                    })
+
+                    # Continue loop to get final response
+                    continue
+
+                else:
+                    # Unexpected stop reason
+                    logger.warning(f"Unexpected stop_reason: {response['stop_reason']}")
+                    break
+
+            except Exception as e:
+                logger.error(f"Error in tool calling loop: {e}", exc_info=True)
+                return {
+                    'content': f"I encountered an error: {str(e)}",
+                    'content_blocks': [{'type': 'text', 'text': f"I encountered an error: {str(e)}"}],
+                    'tool_executions': tool_executor.execution_log
+                }, 'claude'
+
+        # Max iterations reached
+        logger.warning(f"Tool calling loop exceeded max iterations ({max_iterations})")
         return {
-            'role': 'system',
-            'content': f"""You are a helpful assistant for an intentions tracking application.
+            'content': "I apologize, but I reached the maximum number of tool executions for this request.",
+            'content_blocks': [{'type': 'text', 'text': "I apologize, but I reached the maximum number of tool executions."}],
+            'tool_executions': tool_executor.execution_log
+        }, 'claude'
+
+    def _build_system_message(self, intentions_context, tools_available=False):
+        """Build system message with user's intentions context and tool instructions."""
+        base_message = f"""You are a helpful assistant for an intentions tracking application.
 
 The user's current intentions are:
 {intentions_context}
 
 Help them prioritize tasks, break down complex intentions, suggest time management strategies, and identify dependencies between tasks. Be concise and actionable."""
+
+        if tools_available:
+            base_message += """
+
+You have access to the 'create_intention' tool. Use it when the user asks to add, create, or track a new task/intention.
+
+Guidelines:
+- Only use tools when explicitly or implicitly requested
+- For general questions, respond normally without tools
+- When creating a "frog" (most important task), remember only one per day is allowed
+- After using a tool, briefly confirm what was done
+- IMPORTANT: When creating a new intention, do NOT provide a date parameter unless the user explicitly specifies a different date. Let it default to today's date automatically."""
+
+        return {
+            'role': 'system',
+            'content': base_message
         }
 
-    def _get_claude_completion(self, messages):
-        """Get completion from Claude API."""
+    def _get_claude_completion(self, messages, tools=None):
+        """Get completion from Claude API with optional tool support."""
         if not self.anthropic_client:
             raise Exception("Claude API key not configured")
 
@@ -106,14 +246,27 @@ Help them prioritize tasks, break down complex intentions, suggest time manageme
             else:
                 api_messages.append(msg)
 
-        response = self.anthropic_client.messages.create(
-            model="claude-sonnet-4-5-20250929",
-            max_tokens=settings.LLM_MAX_TOKENS_PER_REQUEST,
-            system=system_content,
-            messages=api_messages
-        )
+        # Build API call parameters
+        api_params = {
+            'model': "claude-sonnet-4-5-20250929",
+            'max_tokens': settings.LLM_MAX_TOKENS_PER_REQUEST,
+            'messages': api_messages
+        }
 
-        return response.content[0].text
+        if system_content:
+            api_params['system'] = system_content
+
+        if tools:
+            api_params['tools'] = tools
+
+        response = self.anthropic_client.messages.create(**api_params)
+
+        # Return structured response instead of just text
+        return {
+            'content': response.content,
+            'stop_reason': response.stop_reason,
+            'usage': response.usage
+        }
 
     def _get_openai_completion(self, messages):
         """Get completion from OpenAI API."""
