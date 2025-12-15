@@ -346,7 +346,11 @@ def chat_history(request):
                 'llm_provider': msg.llm_provider
             })
 
-    return JsonResponse({'messages': messages_data})
+    return JsonResponse({
+        'messages': messages_data,
+        # Include preference to keep client state in sync on page load
+        'show_tool_confirmations': request.user.show_tool_confirmations
+    })
 
 @login_required
 def chat_send_message(request):
@@ -436,7 +440,9 @@ def chat_send_message(request):
                 'created_datetime': assistant_msg.created_datetime.isoformat(),
                 'llm_provider': assistant_msg.llm_provider,
                 'tool_executions': response_dict.get('tool_executions', [])
-            }
+            },
+            # Include preference in every response to keep client state in sync
+            'show_tool_confirmations': request.user.show_tool_confirmations
         })
 
     except Exception as e:
