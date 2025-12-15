@@ -58,7 +58,7 @@
 
             // Add messages
             data.messages.forEach(msg => {
-                appendMessage(msg.role, msg.content, false);
+                appendMessage(msg.role, msg.content, false, msg.tool_executions);
             });
 
             scrollToBottom();
@@ -117,10 +117,26 @@
         .then(data => {
             setLoading(false);
 
-            // Assistant response
-            appendMessage('assistant', data.assistant_message.content, true);
+            appendMessage(
+                'assistant',
+                data.assistant_message.content,
+                true,
+                data.assistant_message.tool_executions
+            );
 
             scrollToBottom();
+
+            if (data.assistant_message.tool_executions) {
+                const hasCreatedIntention = data.assistant_message.tool_executions.some(
+                    exec => exec.tool_name === 'create_intention' && exec.success
+                );
+
+                if (hasCreatedIntention) {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                }
+            }
         })
         .catch(error => {
             setLoading(false);
@@ -129,9 +145,7 @@
         });
     }
 
-    // Append message to chat
-    function appendMessage(role, content, animate = false) {
-        // Remove welcome message when first real message appears
+    function appendMessage(role, content, animate = false, toolExecutions = null) {
         const welcome = chatMessages.querySelector('.chat-welcome');
         if (welcome && role !== 'system') {
             welcome.remove();
@@ -140,17 +154,47 @@
         const messageDiv = document.createElement('div');
         messageDiv.className = `chat-message chat-message-${role}`;
 
-        // Format content - render markdown for assistant messages, plain text for others
+        if (toolExecutions && toolExecutions.length > 0) {
+            const toolsDiv = document.createElement('div');
+            toolsDiv.className = 'chat-tools-used';
+
+            toolExecutions.forEach(exec => {
+                const toolBadge = document.createElement('div');
+                toolBadge.className = `chat-tool-badge ${exec.success ? 'success' : 'error'}`;
+
+                const icon = exec.success
+                    ? '<i class="bi bi-check-circle"></i>'
+                    : '<i class="bi bi-x-circle"></i>';
+
+                const toolName = exec.tool_name.replace('_', ' ');
+                const resultMessage = exec.success
+                    ? (exec.result?.message || 'Success')
+                    : (exec.error || 'Failed');
+
+                toolBadge.innerHTML = `
+                    ${icon}
+                    <span class="tool-name">${toolName}</span>
+                    <span class="tool-result">${resultMessage}</span>
+                `;
+
+                toolsDiv.appendChild(toolBadge);
+            });
+
+            messageDiv.appendChild(toolsDiv);
+        }
+
         let formattedContent;
         if (role === 'assistant' && typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
-            // Parse markdown and sanitize HTML
             const rawHtml = marked.parse(content);
             formattedContent = DOMPurify.sanitize(rawHtml);
         } else {
-            // For user and system messages, just preserve line breaks
             formattedContent = content.replace(/\n/g, '<br>');
         }
-        messageDiv.innerHTML = formattedContent;
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'chat-message-content';
+        contentDiv.innerHTML = formattedContent;
+        messageDiv.appendChild(contentDiv);
 
         if (animate) {
             messageDiv.style.opacity = '0';
@@ -160,7 +204,6 @@
         chatMessages.appendChild(messageDiv);
 
         if (animate) {
-            // Trigger animation
             setTimeout(() => {
                 messageDiv.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
                 messageDiv.style.opacity = '1';
