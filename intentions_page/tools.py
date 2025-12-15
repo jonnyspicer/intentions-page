@@ -38,28 +38,42 @@ def create_intention_executor(tool_input, user=None):
     anxiety_inducing = tool_input.get('anxiety_inducing', False)
 
     if froggy:
-        existing_frog = Intention.objects.filter(
-            creator=user,
-            date=intention_date,
-            froggy=True
-        ).first()
+        from django.db import transaction
 
-        if existing_frog:
-            raise ValueError(
-                f"A frog already exists for {intention_date}: '{existing_frog.title}'. "
-                f"Only one frog per day allowed."
+        with transaction.atomic():
+            existing_frog = Intention.objects.select_for_update().filter(
+                creator=user,
+                date=intention_date,
+                froggy=True
+            ).first()
+
+            if existing_frog:
+                raise ValueError(
+                    f"A frog already exists for {intention_date}: '{existing_frog.title}'. "
+                    f"Only one frog per day allowed."
+                )
+
+            intention = Intention.objects.create(
+                title=title,
+                date=intention_date,
+                creator=user,
+                froggy=froggy,
+                sticky=sticky,
+                anxiety_inducing=anxiety_inducing,
+                completed=False,
+                neverminded=False
             )
-
-    intention = Intention.objects.create(
-        title=title,
-        date=intention_date,
-        creator=user,
-        froggy=froggy,
-        sticky=sticky,
-        anxiety_inducing=anxiety_inducing,
-        completed=False,
-        neverminded=False
-    )
+    else:
+        intention = Intention.objects.create(
+            title=title,
+            date=intention_date,
+            creator=user,
+            froggy=froggy,
+            sticky=sticky,
+            anxiety_inducing=anxiety_inducing,
+            completed=False,
+            neverminded=False
+        )
 
     logger.info(f"Created intention #{intention.id} for user {user.id}: {title}")
 
