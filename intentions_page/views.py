@@ -348,6 +348,7 @@ def chat_history(request):
 
     return JsonResponse({
         'messages': messages_data,
+        # Include preference to keep client state in sync on page load
         'show_tool_confirmations': request.user.show_tool_confirmations
     })
 
@@ -440,6 +441,7 @@ def chat_send_message(request):
                 'llm_provider': assistant_msg.llm_provider,
                 'tool_executions': response_dict.get('tool_executions', [])
             },
+            # Include preference in every response to keep client state in sync
             'show_tool_confirmations': request.user.show_tool_confirmations
         })
 

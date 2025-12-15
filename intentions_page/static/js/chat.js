@@ -50,10 +50,8 @@
         })
         .then(response => response.json())
         .then(data => {
-            // Update preference if provided
-            if (data.hasOwnProperty('show_tool_confirmations')) {
-                showToolConfirmations = data.show_tool_confirmations;
-            }
+            // Update preference from server (defaults to true if not provided)
+            showToolConfirmations = data.show_tool_confirmations ?? true;
 
             // Clear existing messages (except welcome message)
             const welcome = chatMessages.querySelector('.chat-welcome');
@@ -123,10 +121,8 @@
         .then(data => {
             setLoading(false);
 
-            // Update preference from server response
-            if (data.hasOwnProperty('show_tool_confirmations')) {
-                showToolConfirmations = data.show_tool_confirmations;
-            }
+            // Update preference from server (defaults to true if not provided)
+            showToolConfirmations = data.show_tool_confirmations ?? true;
 
             appendMessage(
                 'assistant',
