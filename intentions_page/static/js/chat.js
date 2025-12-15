@@ -6,6 +6,7 @@
     // State
     let chatVisible = false;
     let isLoading = false;
+    let showToolConfirmations = true; // Default to showing confirmations
 
     // DOM elements
     const chatSidebar = document.getElementById('chat-sidebar');
@@ -49,6 +50,11 @@
         })
         .then(response => response.json())
         .then(data => {
+            // Update preference if provided
+            if (data.hasOwnProperty('show_tool_confirmations')) {
+                showToolConfirmations = data.show_tool_confirmations;
+            }
+
             // Clear existing messages (except welcome message)
             const welcome = chatMessages.querySelector('.chat-welcome');
             chatMessages.innerHTML = '';
@@ -117,6 +123,11 @@
         .then(data => {
             setLoading(false);
 
+            // Update preference from server response
+            if (data.hasOwnProperty('show_tool_confirmations')) {
+                showToolConfirmations = data.show_tool_confirmations;
+            }
+
             appendMessage(
                 'assistant',
                 data.assistant_message.content,
@@ -154,7 +165,7 @@
         const messageDiv = document.createElement('div');
         messageDiv.className = `chat-message chat-message-${role}`;
 
-        if (toolExecutions && toolExecutions.length > 0) {
+        if (toolExecutions && toolExecutions.length > 0 && showToolConfirmations) {
             const toolsDiv = document.createElement('div');
             toolsDiv.className = 'chat-tools-used';
 

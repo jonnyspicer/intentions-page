@@ -1,5 +1,5 @@
 from django.contrib.auth.models import AbstractUser
-from django.db.models import CharField
+from django.db.models import CharField, BooleanField
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.dispatch import receiver
@@ -12,6 +12,13 @@ class User(AbstractUser):
     name = CharField(_("Name of User"), blank=True, max_length=255)
     first_name = None  # type: ignore
     last_name = None  # type: ignore
+
+    # Tool execution message preference
+    show_tool_confirmations = BooleanField(
+        _("Show tool execution confirmations"),
+        default=True,
+        help_text=_("When enabled, you'll see confirmation messages when the assistant executes tools")
+    )
 
     def get_absolute_url(self):
         """Get url for user's detail view.
