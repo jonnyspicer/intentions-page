@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from datetime import date, timedelta
 from intentions_page.models import Intention, get_working_day_date
-from intentions_page.tools import ToolExecutor, create_intention_executor
+from intentions_page.tools import ToolExecutor, create_intention_executor, reorder_intentions_executor
 
 User = get_user_model()
 
@@ -184,3 +184,151 @@ class ToolExecutorTest(TestCase):
         self.assertEqual(len(executor.execution_log), 1)
         self.assertFalse(executor.execution_log[0]['success'])
         self.assertIsNotNone(executor.execution_log[0]['error'])
+
+
+class ReorderIntentionsExecutorTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.today = get_working_day_date()
+
+        # Create test intentions
+        self.intention1 = Intention.objects.create(
+            title='First task',
+            date=self.today,
+            creator=self.user,
+            order=0
+        )
+        self.intention2 = Intention.objects.create(
+            title='Second task',
+            date=self.today,
+            creator=self.user,
+            order=1
+        )
+        self.intention3 = Intention.objects.create(
+            title='Third task',
+            date=self.today,
+            creator=self.user,
+            order=2
+        )
+
+    def test_successful_reorder(self):
+        # Reorder to: 3, 1, 2 (reverse except swap first two)
+        tool_input = {
+            'intention_ids': [self.intention3.id, self.intention1.id, self.intention2.id]
+        }
+
+        result = reorder_intentions_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['count'], 3)
+        self.assertEqual(result['date'], self.today.isoformat())
+        self.assertIn('Successfully reordered', result['message'])
+
+        # Verify database order
+        self.intention1.refresh_from_db()
+        self.intention2.refresh_from_db()
+        self.intention3.refresh_from_db()
+
+        self.assertEqual(self.intention3.order, 0)  # Now first
+        self.assertEqual(self.intention1.order, 1)  # Now second
+        self.assertEqual(self.intention2.order, 2)  # Now third
+
+    def test_empty_intention_ids(self):
+        tool_input = {'intention_ids': []}
+
+        with self.assertRaisesMessage(ValueError, 'intention_ids list is required and cannot be empty'):
+            reorder_intentions_executor(tool_input, user=self.user)
+
+    def test_invalid_intention_ids_type(self):
+        tool_input = {'intention_ids': 'not a list'}
+
+        with self.assertRaisesMessage(ValueError, 'intention_ids must be a list'):
+            reorder_intentions_executor(tool_input, user=self.user)
+
+    def test_duplicate_intention_ids(self):
+        tool_input = {
+            'intention_ids': [self.intention1.id, self.intention2.id, self.intention1.id]
+        }
+
+        with self.assertRaisesMessage(ValueError, 'intention_ids contains duplicate IDs'):
+            reorder_intentions_executor(tool_input, user=self.user)
+
+    def test_nonexistent_intention(self):
+        tool_input = {
+            'intention_ids': [self.intention1.id, 99999, self.intention3.id]
+        }
+
+        with self.assertRaisesMessage(ValueError, 'Some intentions not found'):
+            reorder_intentions_executor(tool_input, user=self.user)
+
+    def test_other_user_intention(self):
+        other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='testpass123'
+        )
+
+        other_intention = Intention.objects.create(
+            title='Other user task',
+            date=self.today,
+            creator=other_user
+        )
+
+        tool_input = {
+            'intention_ids': [self.intention1.id, other_intention.id]
+        }
+
+        with self.assertRaisesMessage(ValueError, 'Some intentions not found'):
+            reorder_intentions_executor(tool_input, user=self.user)
+
+    def test_specific_date(self):
+        tomorrow = self.today + timedelta(days=1)
+        future_intention = Intention.objects.create(
+            title='Future task',
+            date=tomorrow,
+            creator=self.user,
+            order=0
+        )
+
+        tool_input = {
+            'intention_ids': [future_intention.id],
+            'date': tomorrow.isoformat()
+        }
+
+        result = reorder_intentions_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['date'], tomorrow.isoformat())
+
+    def test_invalid_date_format(self):
+        tool_input = {
+            'intention_ids': [self.intention1.id],
+            'date': 'not-a-date'
+        }
+
+        with self.assertRaisesMessage(ValueError, 'Invalid date format'):
+            reorder_intentions_executor(tool_input, user=self.user)
+
+    def test_wrong_date_intentions(self):
+        tomorrow = self.today + timedelta(days=1)
+
+        tool_input = {
+            'intention_ids': [self.intention1.id],  # Today's intention
+            'date': tomorrow.isoformat()  # But asking for tomorrow
+        }
+
+        with self.assertRaisesMessage(ValueError, 'Some intentions not found'):
+            reorder_intentions_executor(tool_input, user=self.user)
+
+    def test_tool_executor_integration(self):
+        executor = ToolExecutor(user=self.user)
+
+        result = executor.execute('reorder_intentions', {
+            'intention_ids': [self.intention2.id, self.intention3.id, self.intention1.id]
+        })
+
+        self.assertTrue(result['success'])
+        self.assertEqual(len(executor.execution_log), 1)
+        self.assertEqual(executor.execution_log[0]['tool_name'], 'reorder_intentions')

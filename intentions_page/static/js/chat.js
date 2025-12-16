@@ -138,7 +138,11 @@
                     exec => exec.tool_name === 'create_intention' && exec.success
                 );
 
-                if (hasCreatedIntention) {
+                const hasReorderedIntentions = data.assistant_message.tool_executions.some(
+                    exec => exec.tool_name === 'reorder_intentions' && exec.success
+                );
+
+                if (hasCreatedIntention || hasReorderedIntentions) {
                     setTimeout(() => {
                         window.location.reload();
                     }, 1500);

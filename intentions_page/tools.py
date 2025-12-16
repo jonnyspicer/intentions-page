@@ -88,6 +88,81 @@ def create_intention_executor(tool_input, user=None):
     }
 
 
+def reorder_intentions_executor(tool_input, user=None):
+    """
+    Execute the reorder_intentions tool.
+
+    Args:
+        tool_input: Dict with keys: intention_ids (list of int), date (optional)
+        user: Django User object
+
+    Returns:
+        dict with result information
+
+    Raises:
+        ValueError: For validation errors
+    """
+    from intentions_page.models import Intention, get_working_day_date
+    from django.utils.dateparse import parse_date
+    from django.db import transaction
+
+    intention_ids = tool_input.get('intention_ids', [])
+    if not intention_ids:
+        raise ValueError("intention_ids list is required and cannot be empty")
+
+    if not isinstance(intention_ids, list):
+        raise ValueError("intention_ids must be a list of intention IDs")
+
+    # Check for duplicate IDs
+    if len(intention_ids) != len(set(intention_ids)):
+        raise ValueError("intention_ids contains duplicate IDs")
+
+    date_str = tool_input.get('date')
+    if date_str:
+        target_date = parse_date(date_str)
+        if not target_date:
+            raise ValueError(f"Invalid date format: {date_str}. Use YYYY-MM-DD.")
+    else:
+        target_date = get_working_day_date()
+
+    # Verify all intentions exist and belong to the user
+    intentions = Intention.objects.filter(
+        id__in=intention_ids,
+        creator=user,
+        date=target_date
+    )
+
+    if intentions.count() != len(intention_ids):
+        raise ValueError(
+            f"Some intentions not found or don't belong to you for {target_date}. "
+            f"Found {intentions.count()} out of {len(intention_ids)} intentions."
+        )
+
+    # Update order for each intention atomically
+    with transaction.atomic():
+        for order_index, intention_id in enumerate(intention_ids):
+            Intention.objects.filter(id=intention_id).update(order=order_index)
+
+    logger.info(f"Reordered {len(intention_ids)} intentions for user {user.id} on {target_date}")
+
+    # Return updated intentions in new order
+    reordered_intentions = Intention.objects.filter(id__in=intention_ids).order_by('order')
+
+    return {
+        'count': len(intention_ids),
+        'date': target_date.isoformat(),
+        'intentions': [
+            {
+                'id': intention.id,
+                'title': intention.title,
+                'order': intention.order
+            }
+            for intention in reordered_intentions
+        ],
+        'message': f"Successfully reordered {len(intention_ids)} intentions for {target_date}"
+    }
+
+
 TOOL_REGISTRY = {
     'create_intention': {
         'schema': {
@@ -124,6 +199,31 @@ TOOL_REGISTRY = {
             }
         },
         'executor': create_intention_executor,
+        'requires_user': True
+    },
+    'reorder_intentions': {
+        'schema': {
+            'name': 'reorder_intentions',
+            'description': 'Reorder intentions for a specific date by priority. Use when user asks to prioritize, sort, or reorder their tasks. Provide the intention IDs in the desired order (first ID will be shown first).',
+            'input_schema': {
+                'type': 'object',
+                'properties': {
+                    'intention_ids': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'integer'
+                        },
+                        'description': 'List of intention IDs in the desired order (first ID = highest priority/first in list)'
+                    },
+                    'date': {
+                        'type': 'string',
+                        'description': 'Date in YYYY-MM-DD format. ONLY provide this if the user explicitly requests a specific date. Otherwise, omit this parameter to use today\'s date.'
+                    }
+                },
+                'required': ['intention_ids']
+            }
+        },
+        'executor': reorder_intentions_executor,
         'requires_user': True
     }
 }
