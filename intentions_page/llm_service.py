@@ -217,12 +217,15 @@ Help them prioritize tasks, break down complex intentions, suggest time manageme
         if tools_available:
             base_message += """
 
-You have access to the 'create_intention' tool. Use it when the user asks to add, create, or track a new task/intention.
+You have access to these tools:
+1. 'create_intention' - Create a new intention/task
+2. 'reorder_intentions' - Reorder intentions by priority
 
 Guidelines:
 - Only use tools when explicitly or implicitly requested
 - For general questions, respond normally without tools
 - When creating a "frog" (most important task), remember only one per day is allowed
+- When reordering, use the intention IDs shown in parentheses (e.g., "ID: 123")
 - After using a tool, briefly confirm what was done
 - IMPORTANT: When creating a new intention, do NOT provide a date parameter unless the user explicitly specifies a different date. Let it default to today's date automatically."""
 

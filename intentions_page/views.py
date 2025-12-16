@@ -244,7 +244,8 @@ def build_intentions_context(user, include_history_days=7):
         elif intention.anxiety_inducing:
             status = "[CHARGED] "
 
-        intentions_by_date[date_str].append(f"{status}{intention.title}")
+        # Include intention ID for tool use
+        intentions_by_date[date_str].append(f"{status}{intention.title} (ID: {intention.id})")
 
     # Format as text
     context_lines = []

@@ -16,6 +16,7 @@ class Intention(models.Model):
     title = models.CharField(max_length=500)
     date = models.DateField(default=get_working_day_date)
     created_datetime = models.DateTimeField(default=timezone.now)
+    order = models.IntegerField(default=0)
 
     creator = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
 
@@ -26,7 +27,7 @@ class Intention(models.Model):
     anxiety_inducing = models.BooleanField(default=False)
 
     class Meta:
-        ordering = ['created_datetime']
+        ordering = ['order', 'created_datetime']
 
     def __str__(self):
         return self.title
