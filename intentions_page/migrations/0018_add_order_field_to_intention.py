@@ -10,13 +10,13 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterModelOptions(
-            name='intention',
-            options={'ordering': ['order', 'created_datetime']},
-        ),
         migrations.AddField(
             model_name='intention',
             name='order',
             field=models.IntegerField(default=0),
+        ),
+        migrations.AlterModelOptions(
+            name='intention',
+            options={'ordering': ['order', 'created_datetime']},
         ),
     ]

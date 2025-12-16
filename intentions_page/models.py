@@ -16,7 +16,7 @@ class Intention(models.Model):
     title = models.CharField(max_length=500)
     date = models.DateField(default=get_working_day_date)
     created_datetime = models.DateTimeField(default=timezone.now)
-    order = models.IntegerField(default=0)
+    order = models.IntegerField(default=0, db_index=True)
 
     creator = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
 

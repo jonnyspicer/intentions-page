@@ -113,6 +113,10 @@ def reorder_intentions_executor(tool_input, user=None):
     if not isinstance(intention_ids, list):
         raise ValueError("intention_ids must be a list of intention IDs")
 
+    # Check for duplicate IDs
+    if len(intention_ids) != len(set(intention_ids)):
+        raise ValueError("intention_ids contains duplicate IDs")
+
     date_str = tool_input.get('date')
     if date_str:
         target_date = parse_date(date_str)

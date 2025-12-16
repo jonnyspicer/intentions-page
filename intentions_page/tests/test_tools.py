@@ -248,6 +248,14 @@ class ReorderIntentionsExecutorTest(TestCase):
         with self.assertRaisesMessage(ValueError, 'intention_ids must be a list'):
             reorder_intentions_executor(tool_input, user=self.user)
 
+    def test_duplicate_intention_ids(self):
+        tool_input = {
+            'intention_ids': [self.intention1.id, self.intention2.id, self.intention1.id]
+        }
+
+        with self.assertRaisesMessage(ValueError, 'intention_ids contains duplicate IDs'):
+            reorder_intentions_executor(tool_input, user=self.user)
+
     def test_nonexistent_intention(self):
         tool_input = {
             'intention_ids': [self.intention1.id, 99999, self.intention3.id]
