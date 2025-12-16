@@ -425,6 +425,64 @@ class UpdateIntentionStatusExecutorTest(TestCase):
         self.intention.refresh_from_db()
         self.assertFalse(self.intention.froggy)
 
+    def test_concurrent_frog_update_prevented(self):
+        from django.db import connection
+        from threading import Thread
+        from django.db.utils import OperationalError
+        import time
+
+        # Create a second intention to try to make a frog concurrently
+        intention2 = Intention.objects.create(
+            title='Second task',
+            date=self.today,
+            creator=self.user,
+            froggy=False
+        )
+
+        results = {'thread1': None, 'thread2': None}
+
+        def set_frog(thread_name, intention_id):
+            try:
+                time.sleep(0.01)  # Small delay to increase chance of collision
+                result = update_intention_status_executor(
+                    {
+                        'intention_id': intention_id,
+                        'status_field': 'froggy',
+                        'value': True
+                    },
+                    user=self.user
+                )
+                results[thread_name] = {'success': True, 'result': result}
+            except ValueError as e:
+                results[thread_name] = {'success': False, 'error': str(e), 'error_type': 'ValueError'}
+            except OperationalError as e:
+                # SQLite database locking is expected in concurrent scenarios
+                results[thread_name] = {'success': False, 'error': str(e), 'error_type': 'OperationalError'}
+
+        connection.close()
+
+        thread1 = Thread(target=set_frog, args=('thread1', self.intention.id))
+        thread2 = Thread(target=set_frog, args=('thread2', intention2.id))
+
+        thread1.start()
+        thread2.start()
+
+        thread1.join(timeout=5)
+        thread2.join(timeout=5)
+
+        # Count successful updates
+        success_count = sum(1 for r in results.values() if r and r.get('success'))
+
+        # In SQLite, concurrent transactions may both fail with OperationalError
+        # The important thing is that at most one frog exists in the database
+        frogs = Intention.objects.filter(creator=self.user, date=self.today, froggy=True)
+        self.assertLessEqual(frogs.count(), 1, "At most one frog should exist in database")
+
+        # If any thread succeeded, exactly one should have succeeded
+        if success_count > 0:
+            self.assertEqual(success_count, 1, "If any thread succeeded, only one should have")
+            self.assertEqual(frogs.count(), 1, "Database should have exactly one frog if update succeeded")
+
     def test_tool_executor_integration(self):
         executor = ToolExecutor(user=self.user)
 

@@ -2,6 +2,15 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Human-readable status names for messaging
+STATUS_NAMES = {
+    'completed': 'completed',
+    'neverminded': 'neverminded',
+    'sticky': 'sticky',
+    'froggy': 'frog (most important)',
+    'anxiety_inducing': 'anxiety-inducing'
+}
+
 def create_intention_executor(tool_input, user=None):
     """
     Execute the create_intention tool.
@@ -138,40 +147,35 @@ def update_intention_status_executor(tool_input, user=None):
             f"Intention with ID {intention_id} not found or doesn't belong to you"
         )
 
-    # Special validation for froggy
-    if status_field == 'froggy' and value is True:
+    # Special validation for froggy - wrap ALL froggy updates in transaction
+    if status_field == 'froggy':
         from django.db import transaction
 
         with transaction.atomic():
-            existing_frog = Intention.objects.select_for_update().filter(
-                creator=user,
-                date=intention.date,
-                froggy=True
-            ).exclude(id=intention_id).first()
+            if value is True:
+                # Check for existing frog only when setting froggy=True
+                existing_frog = Intention.objects.select_for_update().filter(
+                    creator=user,
+                    date=intention.date,
+                    froggy=True
+                ).exclude(id=intention_id).first()
 
-            if existing_frog:
-                raise ValueError(
-                    f"A frog already exists for {intention.date}: '{existing_frog.title}'. "
-                    f"Only one frog per day allowed. Remove the existing frog first."
-                )
+                if existing_frog:
+                    raise ValueError(
+                        f"A frog already exists for {intention.date}: '{existing_frog.title}'. "
+                        f"Only one frog per day allowed. Remove the existing frog first."
+                    )
 
-            # Update the status
+            # Update within transaction for both True and False
             setattr(intention, status_field, value)
             intention.save()
     else:
-        # Update the status
+        # Non-froggy updates don't need transaction
         setattr(intention, status_field, value)
         intention.save()
 
     # Get the human-readable status name
-    status_names = {
-        'completed': 'completed',
-        'neverminded': 'neverminded',
-        'sticky': 'sticky',
-        'froggy': 'frog (most important)',
-        'anxiety_inducing': 'anxiety-inducing'
-    }
-    status_name = status_names[status_field]
+    status_name = STATUS_NAMES[status_field]
     action = "marked as" if value else "unmarked as"
 
     logger.info(
