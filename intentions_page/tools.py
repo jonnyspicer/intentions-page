@@ -2,6 +2,15 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Human-readable status names for messaging
+STATUS_NAMES = {
+    'completed': 'completed',
+    'neverminded': 'neverminded',
+    'sticky': 'sticky',
+    'froggy': 'frog (most important)',
+    'anxiety_inducing': 'anxiety-inducing'
+}
+
 def create_intention_executor(tool_input, user=None):
     """
     Execute the create_intention tool.
@@ -85,6 +94,102 @@ def create_intention_executor(tool_input, user=None):
         'sticky': intention.sticky,
         'anxiety_inducing': intention.anxiety_inducing,
         'message': f"Successfully created intention: {title}"
+    }
+
+
+def update_intention_status_executor(tool_input, user=None):
+    """
+    Execute the update_intention_status tool.
+
+    Args:
+        tool_input: Dict with keys: intention_id (int), status_field (str), value (bool)
+        user: Django User object
+
+    Returns:
+        dict with result information
+
+    Raises:
+        ValueError: For validation errors
+    """
+    from intentions_page.models import Intention
+
+    intention_id = tool_input.get('intention_id')
+    if not intention_id:
+        raise ValueError("intention_id is required")
+
+    if not isinstance(intention_id, int):
+        raise ValueError("intention_id must be an integer")
+
+    status_field = tool_input.get('status_field')
+    valid_status_fields = ['completed', 'neverminded', 'sticky', 'froggy', 'anxiety_inducing']
+
+    if not status_field:
+        raise ValueError("status_field is required")
+
+    if status_field not in valid_status_fields:
+        raise ValueError(
+            f"Invalid status_field '{status_field}'. "
+            f"Must be one of: {', '.join(valid_status_fields)}"
+        )
+
+    value = tool_input.get('value')
+    if value is None:
+        raise ValueError("value is required")
+
+    if not isinstance(value, bool):
+        raise ValueError("value must be a boolean (true or false)")
+
+    # Get the intention and verify ownership
+    try:
+        intention = Intention.objects.get(id=intention_id, creator=user)
+    except Intention.DoesNotExist:
+        raise ValueError(
+            f"Intention with ID {intention_id} not found or doesn't belong to you"
+        )
+
+    # Special validation for froggy - wrap ALL froggy updates in transaction
+    if status_field == 'froggy':
+        from django.db import transaction
+
+        with transaction.atomic():
+            if value is True:
+                # Check for existing frog only when setting froggy=True
+                existing_frog = Intention.objects.select_for_update().filter(
+                    creator=user,
+                    date=intention.date,
+                    froggy=True
+                ).exclude(id=intention_id).first()
+
+                if existing_frog:
+                    raise ValueError(
+                        f"A frog already exists for {intention.date}: '{existing_frog.title}'. "
+                        f"Only one frog per day allowed. Remove the existing frog first."
+                    )
+
+            # Update within transaction for both True and False
+            setattr(intention, status_field, value)
+            intention.save()
+    else:
+        # Non-froggy updates don't need transaction
+        setattr(intention, status_field, value)
+        intention.save()
+
+    # Get the human-readable status name
+    status_name = STATUS_NAMES[status_field]
+    action = "marked as" if value else "unmarked as"
+
+    logger.info(
+        f"Updated intention #{intention.id} for user {user.id}: "
+        f"{status_field}={value}"
+    )
+
+    return {
+        'intention_id': intention.id,
+        'title': intention.title,
+        'status_field': status_field,
+        'value': value,
+        'date': intention.date.isoformat(),
+        'message': f"Successfully {action} {status_name}: {intention.title}"
     }
 
 
@@ -199,6 +304,33 @@ TOOL_REGISTRY = {
             }
         },
         'executor': create_intention_executor,
+        'requires_user': True
+    },
+    'update_intention_status': {
+        'schema': {
+            'name': 'update_intention_status',
+            'description': 'Update the status of an intention. Use when user indicates they completed/neverminded a task, or wants to change sticky/froggy/anxiety-inducing flags. Examples: "I finished X", "Mark Y as my frog", "Make Z sticky", "I\'m not doing X anymore".',
+            'input_schema': {
+                'type': 'object',
+                'properties': {
+                    'intention_id': {
+                        'type': 'integer',
+                        'description': 'ID of the intention to update (shown in parentheses like "ID: 123")'
+                    },
+                    'status_field': {
+                        'type': 'string',
+                        'description': 'Which status to update',
+                        'enum': ['completed', 'neverminded', 'sticky', 'froggy', 'anxiety_inducing']
+                    },
+                    'value': {
+                        'type': 'boolean',
+                        'description': 'New value for the status (true to set, false to unset)'
+                    }
+                },
+                'required': ['intention_id', 'status_field', 'value']
+            }
+        },
+        'executor': update_intention_status_executor,
         'requires_user': True
     },
     'reorder_intentions': {

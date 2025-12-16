@@ -219,15 +219,17 @@ Help them prioritize tasks, break down complex intentions, suggest time manageme
 
 You have access to these tools:
 1. 'create_intention' - Create a new intention/task
-2. 'reorder_intentions' - Reorder intentions by priority
+2. 'update_intention_status' - Update status of an intention (mark completed, sticky, froggy, anxiety-inducing, neverminded)
+3. 'reorder_intentions' - Reorder intentions by priority
 
 Guidelines:
 - Only use tools when explicitly or implicitly requested
 - For general questions, respond normally without tools
 - When creating a "frog" (most important task), remember only one per day is allowed
-- When reordering, use the intention IDs shown in parentheses (e.g., "ID: 123")
+- When updating status or reordering, use the intention IDs shown in parentheses (e.g., "ID: 123")
 - After using a tool, briefly confirm what was done
-- IMPORTANT: When creating a new intention, do NOT provide a date parameter unless the user explicitly specifies a different date. Let it default to today's date automatically."""
+- IMPORTANT: When creating a new intention, do NOT provide a date parameter unless the user explicitly specifies a different date. Let it default to today's date automatically.
+- Status fields: 'completed' (task done), 'neverminded' (gave up on task), 'sticky' (carry forward), 'froggy' (most important), 'anxiety_inducing' (causes stress)"""
 
         return {
             'role': 'system',

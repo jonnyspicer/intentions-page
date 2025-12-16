@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from datetime import date, timedelta
 from intentions_page.models import Intention, get_working_day_date
-from intentions_page.tools import ToolExecutor, create_intention_executor, reorder_intentions_executor
+from intentions_page.tools import ToolExecutor, create_intention_executor, reorder_intentions_executor, update_intention_status_executor
 
 User = get_user_model()
 
@@ -184,6 +184,317 @@ class ToolExecutorTest(TestCase):
         self.assertEqual(len(executor.execution_log), 1)
         self.assertFalse(executor.execution_log[0]['success'])
         self.assertIsNotNone(executor.execution_log[0]['error'])
+
+
+class UpdateIntentionStatusExecutorTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.today = get_working_day_date()
+
+        # Create test intention
+        self.intention = Intention.objects.create(
+            title='Test task',
+            date=self.today,
+            creator=self.user,
+            completed=False,
+            neverminded=False,
+            sticky=False,
+            froggy=False,
+            anxiety_inducing=False
+        )
+
+    def test_mark_intention_completed(self):
+        tool_input = {
+            'intention_id': self.intention.id,
+            'status_field': 'completed',
+            'value': True
+        }
+
+        result = update_intention_status_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['intention_id'], self.intention.id)
+        self.assertEqual(result['status_field'], 'completed')
+        self.assertTrue(result['value'])
+        self.assertIn('marked as completed', result['message'])
+
+        self.intention.refresh_from_db()
+        self.assertTrue(self.intention.completed)
+
+    def test_unmark_intention_completed(self):
+        self.intention.completed = True
+        self.intention.save()
+
+        tool_input = {
+            'intention_id': self.intention.id,
+            'status_field': 'completed',
+            'value': False
+        }
+
+        result = update_intention_status_executor(tool_input, user=self.user)
+
+        self.assertFalse(result['value'])
+        self.assertIn('unmarked as completed', result['message'])
+
+        self.intention.refresh_from_db()
+        self.assertFalse(self.intention.completed)
+
+    def test_mark_intention_neverminded(self):
+        tool_input = {
+            'intention_id': self.intention.id,
+            'status_field': 'neverminded',
+            'value': True
+        }
+
+        result = update_intention_status_executor(tool_input, user=self.user)
+
+        self.assertTrue(result['value'])
+        self.assertIn('marked as neverminded', result['message'])
+
+        self.intention.refresh_from_db()
+        self.assertTrue(self.intention.neverminded)
+
+    def test_mark_intention_sticky(self):
+        tool_input = {
+            'intention_id': self.intention.id,
+            'status_field': 'sticky',
+            'value': True
+        }
+
+        result = update_intention_status_executor(tool_input, user=self.user)
+
+        self.assertTrue(result['value'])
+        self.assertIn('marked as sticky', result['message'])
+
+        self.intention.refresh_from_db()
+        self.assertTrue(self.intention.sticky)
+
+    def test_mark_intention_froggy(self):
+        tool_input = {
+            'intention_id': self.intention.id,
+            'status_field': 'froggy',
+            'value': True
+        }
+
+        result = update_intention_status_executor(tool_input, user=self.user)
+
+        self.assertTrue(result['value'])
+        self.assertIn('marked as frog', result['message'])
+
+        self.intention.refresh_from_db()
+        self.assertTrue(self.intention.froggy)
+
+    def test_mark_intention_anxiety_inducing(self):
+        tool_input = {
+            'intention_id': self.intention.id,
+            'status_field': 'anxiety_inducing',
+            'value': True
+        }
+
+        result = update_intention_status_executor(tool_input, user=self.user)
+
+        self.assertTrue(result['value'])
+        self.assertIn('marked as anxiety-inducing', result['message'])
+
+        self.intention.refresh_from_db()
+        self.assertTrue(self.intention.anxiety_inducing)
+
+    def test_missing_intention_id(self):
+        tool_input = {
+            'status_field': 'completed',
+            'value': True
+        }
+
+        with self.assertRaisesMessage(ValueError, 'intention_id is required'):
+            update_intention_status_executor(tool_input, user=self.user)
+
+    def test_invalid_intention_id_type(self):
+        tool_input = {
+            'intention_id': 'not an integer',
+            'status_field': 'completed',
+            'value': True
+        }
+
+        with self.assertRaisesMessage(ValueError, 'intention_id must be an integer'):
+            update_intention_status_executor(tool_input, user=self.user)
+
+    def test_missing_status_field(self):
+        tool_input = {
+            'intention_id': self.intention.id,
+            'value': True
+        }
+
+        with self.assertRaisesMessage(ValueError, 'status_field is required'):
+            update_intention_status_executor(tool_input, user=self.user)
+
+    def test_invalid_status_field(self):
+        tool_input = {
+            'intention_id': self.intention.id,
+            'status_field': 'invalid_field',
+            'value': True
+        }
+
+        with self.assertRaisesMessage(ValueError, 'Invalid status_field'):
+            update_intention_status_executor(tool_input, user=self.user)
+
+    def test_missing_value(self):
+        tool_input = {
+            'intention_id': self.intention.id,
+            'status_field': 'completed'
+        }
+
+        with self.assertRaisesMessage(ValueError, 'value is required'):
+            update_intention_status_executor(tool_input, user=self.user)
+
+    def test_invalid_value_type(self):
+        tool_input = {
+            'intention_id': self.intention.id,
+            'status_field': 'completed',
+            'value': 'yes'
+        }
+
+        with self.assertRaisesMessage(ValueError, 'value must be a boolean'):
+            update_intention_status_executor(tool_input, user=self.user)
+
+    def test_nonexistent_intention(self):
+        tool_input = {
+            'intention_id': 99999,
+            'status_field': 'completed',
+            'value': True
+        }
+
+        with self.assertRaisesMessage(ValueError, 'not found or doesn\'t belong to you'):
+            update_intention_status_executor(tool_input, user=self.user)
+
+    def test_other_user_intention(self):
+        other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='testpass123'
+        )
+
+        other_intention = Intention.objects.create(
+            title='Other user task',
+            date=self.today,
+            creator=other_user
+        )
+
+        tool_input = {
+            'intention_id': other_intention.id,
+            'status_field': 'completed',
+            'value': True
+        }
+
+        with self.assertRaisesMessage(ValueError, 'not found or doesn\'t belong to you'):
+            update_intention_status_executor(tool_input, user=self.user)
+
+    def test_froggy_validation_only_one_per_day(self):
+        # Create existing frog
+        existing_frog = Intention.objects.create(
+            title='Existing frog',
+            date=self.today,
+            creator=self.user,
+            froggy=True
+        )
+
+        tool_input = {
+            'intention_id': self.intention.id,
+            'status_field': 'froggy',
+            'value': True
+        }
+
+        with self.assertRaisesMessage(ValueError, 'A frog already exists'):
+            update_intention_status_executor(tool_input, user=self.user)
+
+    def test_unmark_existing_frog(self):
+        self.intention.froggy = True
+        self.intention.save()
+
+        tool_input = {
+            'intention_id': self.intention.id,
+            'status_field': 'froggy',
+            'value': False
+        }
+
+        result = update_intention_status_executor(tool_input, user=self.user)
+
+        self.assertFalse(result['value'])
+        self.intention.refresh_from_db()
+        self.assertFalse(self.intention.froggy)
+
+    def test_concurrent_frog_update_prevented(self):
+        from django.db import connection
+        from threading import Thread
+        from django.db.utils import OperationalError
+        import time
+
+        # Create a second intention to try to make a frog concurrently
+        intention2 = Intention.objects.create(
+            title='Second task',
+            date=self.today,
+            creator=self.user,
+            froggy=False
+        )
+
+        results = {'thread1': None, 'thread2': None}
+
+        def set_frog(thread_name, intention_id):
+            try:
+                time.sleep(0.01)  # Small delay to increase chance of collision
+                result = update_intention_status_executor(
+                    {
+                        'intention_id': intention_id,
+                        'status_field': 'froggy',
+                        'value': True
+                    },
+                    user=self.user
+                )
+                results[thread_name] = {'success': True, 'result': result}
+            except ValueError as e:
+                results[thread_name] = {'success': False, 'error': str(e), 'error_type': 'ValueError'}
+            except OperationalError as e:
+                # SQLite database locking is expected in concurrent scenarios
+                results[thread_name] = {'success': False, 'error': str(e), 'error_type': 'OperationalError'}
+
+        connection.close()
+
+        thread1 = Thread(target=set_frog, args=('thread1', self.intention.id))
+        thread2 = Thread(target=set_frog, args=('thread2', intention2.id))
+
+        thread1.start()
+        thread2.start()
+
+        thread1.join(timeout=5)
+        thread2.join(timeout=5)
+
+        # Count successful updates
+        success_count = sum(1 for r in results.values() if r and r.get('success'))
+
+        # In SQLite, concurrent transactions may both fail with OperationalError
+        # The important thing is that at most one frog exists in the database
+        frogs = Intention.objects.filter(creator=self.user, date=self.today, froggy=True)
+        self.assertLessEqual(frogs.count(), 1, "At most one frog should exist in database")
+
+        # If any thread succeeded, exactly one should have succeeded
+        if success_count > 0:
+            self.assertEqual(success_count, 1, "If any thread succeeded, only one should have")
+            self.assertEqual(frogs.count(), 1, "Database should have exactly one frog if update succeeded")
+
+    def test_tool_executor_integration(self):
+        executor = ToolExecutor(user=self.user)
+
+        result = executor.execute('update_intention_status', {
+            'intention_id': self.intention.id,
+            'status_field': 'completed',
+            'value': True
+        })
+
+        self.assertTrue(result['success'])
+        self.assertEqual(len(executor.execution_log), 1)
+        self.assertEqual(executor.execution_log[0]['tool_name'], 'update_intention_status')
 
 
 class ReorderIntentionsExecutorTest(TestCase):
