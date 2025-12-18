@@ -1737,6 +1737,18 @@ class ToolExecutor:
                 'error': None
             })
 
+            # Save to AgentAction model for audit trail
+            if self.user:
+                from intentions_page.models import AgentAction
+                AgentAction.objects.create(
+                    user=self.user,
+                    tool_name=tool_name,
+                    tool_input=tool_input,
+                    tool_output=result,
+                    success=True,
+                    error=None
+                )
+
             return {
                 'success': True,
                 'result': result,
@@ -1753,6 +1765,18 @@ class ToolExecutor:
                 'success': False,
                 'error': str(e)
             })
+
+            # Save failed execution to AgentAction model
+            if self.user:
+                from intentions_page.models import AgentAction
+                AgentAction.objects.create(
+                    user=self.user,
+                    tool_name=tool_name,
+                    tool_input=tool_input,
+                    tool_output=None,
+                    success=False,
+                    error=str(e)
+                )
 
             return {
                 'success': False,

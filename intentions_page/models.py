@@ -119,6 +119,31 @@ class ChatMessage(models.Model):
         return f"{self.role}: {self.content[:50]}..."
 
 
+class AgentAction(models.Model):
+    """
+    Audit log for all agent tool executions.
+    Records what actions the agent took on behalf of the user.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='agent_actions')
+    tool_name = models.CharField(max_length=100)
+    tool_input = models.JSONField()  # The input parameters passed to the tool
+    tool_output = models.JSONField(null=True, blank=True)  # The result returned by the tool
+    success = models.BooleanField(default=True)
+    error = models.TextField(null=True, blank=True)  # Error message if failed
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['user', '-timestamp']),
+            models.Index(fields=['tool_name']),
+        ]
+
+    def __str__(self):
+        status = "✓" if self.success else "✗"
+        return f"{status} {self.tool_name} by {self.user.username} at {self.timestamp}"
+
+
 class RecurringIntention(models.Model):
     """
     Defines a recurring pattern for automatically generating intentions.
