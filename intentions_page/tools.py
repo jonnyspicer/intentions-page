@@ -453,6 +453,20 @@ def update_intention_executor(tool_input, user=None):
             raise ValueError(f"Invalid date format: {new_date_str}. Use YYYY-MM-DD.")
 
         if new_date != intention.date:
+            # Check if moving a frog to a date that already has one
+            if intention.froggy:
+                existing_frog = Intention.objects.filter(
+                    creator=user,
+                    date=new_date,
+                    froggy=True
+                ).exclude(id=intention.id).first()
+
+                if existing_frog:
+                    raise ValueError(
+                        f"A frog already exists for {new_date}: '{existing_frog.title}'. "
+                        f"Cannot move this frog there. Remove the existing frog first."
+                    )
+
             old_date = intention.date
             intention.date = new_date
             changes.append(f"date: {old_date.isoformat()} → {new_date.isoformat()}")

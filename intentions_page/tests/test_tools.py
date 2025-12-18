@@ -1030,3 +1030,52 @@ class UpdateIntentionExecutorTest(TestCase):
         
         with self.assertRaisesMessage(ValueError, 'Invalid date format'):
             update_intention_executor(tool_input, user=self.user)
+
+    def test_cannot_move_frog_to_date_with_existing_frog(self):
+        # Make the test intention a frog
+        self.intention.froggy = True
+        self.intention.save()
+        
+        # Create another frog on tomorrow
+        tomorrow = self.today + timedelta(days=1)
+        existing_frog = Intention.objects.create(
+            title='Tomorrow frog',
+            date=tomorrow,
+            creator=self.user,
+            froggy=True
+        )
+        
+        # Try to move today's frog to tomorrow (should fail)
+        tool_input = {
+            'intention_id': self.intention.id,
+            'date': tomorrow.isoformat()
+        }
+        
+        with self.assertRaisesMessage(ValueError, 'A frog already exists'):
+            update_intention_executor(tool_input, user=self.user)
+        
+        # Verify the frog wasn't moved
+        self.intention.refresh_from_db()
+        self.assertEqual(self.intention.date, self.today)
+
+    def test_can_move_non_frog_to_date_with_existing_frog(self):
+        # Create a frog on tomorrow
+        tomorrow = self.today + timedelta(days=1)
+        frog = Intention.objects.create(
+            title='Tomorrow frog',
+            date=tomorrow,
+            creator=self.user,
+            froggy=True
+        )
+        
+        # Move a non-frog intention to tomorrow (should succeed)
+        tool_input = {
+            'intention_id': self.intention.id,
+            'date': tomorrow.isoformat()
+        }
+        result = update_intention_executor(tool_input, user=self.user)
+        
+        # Should succeed since we're not moving a frog
+        self.assertEqual(result['date'], tomorrow.isoformat())
+        self.intention.refresh_from_db()
+        self.assertEqual(self.intention.date, tomorrow)
