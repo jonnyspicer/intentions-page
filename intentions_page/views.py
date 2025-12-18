@@ -134,18 +134,38 @@ def edit(request, primary_key):
         raise PermissionDenied
 
     if request.method == 'POST':
-        intention.edit_form = IntentionEditForm(request.POST, instance=intention)
+        # Handle recurring toggle separately
+        if 'toggle_recurring' in request.POST:
+            if intention.recurring_intention and intention.recurring_intention.is_active:
+                # Turn off recurring: deactivate the pattern
+                intention.recurring_intention.is_active = False
+                intention.recurring_intention.save()
+            elif intention.recurring_intention and not intention.recurring_intention.is_active:
+                # Reactivate an existing inactive pattern
+                intention.recurring_intention.is_active = True
+                intention.recurring_intention.save()
+            else:
+                # Turn on recurring: create a new daily pattern
+                intention.get_or_create_recurring_pattern()
 
-        if intention.edit_form.is_valid():
-            # Enforce single froggy per day: if marking this as froggy, un-frog others
-            if intention.edit_form.cleaned_data.get('froggy', False):
-                Intention.objects.filter(
-                    creator=request.user,
-                    date=intention.date,
-                    froggy=True
-                ).exclude(id=intention.id).update(froggy=False)
+            # Refresh the intention to get updated recurring status
+            intention.refresh_from_db()
+            # Initialize form for template rendering
+            intention.edit_form = IntentionEditForm(instance=intention)
+        else:
+            # Handle normal form fields
+            intention.edit_form = IntentionEditForm(request.POST, instance=intention)
 
-            intention.edit_form.save()
+            if intention.edit_form.is_valid():
+                # Enforce single froggy per day: if marking this as froggy, un-frog others
+                if intention.edit_form.cleaned_data.get('froggy', False):
+                    Intention.objects.filter(
+                        creator=request.user,
+                        date=intention.date,
+                        froggy=True
+                    ).exclude(id=intention.id).update(froggy=False)
+
+                intention.edit_form.save()
 
     return render(request, "components/single_intention.html", context={'intention': intention})
 
