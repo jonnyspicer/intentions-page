@@ -218,6 +218,8 @@ Help them prioritize tasks, break down complex intentions, suggest time manageme
             base_message += """
 
 You have access to these tools:
+
+**Regular Intentions:**
 1. 'create_intention' - Create a single new intention/task
 2. 'create_intentions_batch' - Create multiple intentions at once (use when breaking down complex tasks)
 3. 'update_intention_status' - Update status of an intention (mark completed, sticky, froggy, anxiety-inducing, neverminded)
@@ -226,6 +228,14 @@ You have access to these tools:
 6. 'reorder_intentions' - Reorder intentions by priority
 7. 'list_intentions' - List all intentions for a date with optional status filtering
 8. 'get_intention_details' - Get detailed information about a specific intention by ID
+
+**Recurring Intentions:**
+9. 'create_recurring_intention' - Set up a recurring pattern (daily, weekly, monthly, yearly)
+10. 'list_recurring_intentions' - View all recurring patterns
+11. 'update_recurring_intention' - Modify an existing recurring pattern
+12. 'pause_recurring_intention' - Temporarily stop a recurring pattern
+13. 'resume_recurring_intention' - Restart a paused recurring pattern
+14. 'delete_recurring_intention' - Permanently remove a recurring pattern
 
 Guidelines:
 - Only use tools when explicitly or implicitly requested
@@ -238,7 +248,15 @@ Guidelines:
 - Use 'list_intentions' to see what intentions exist before updating or reordering them
 - After using a tool, briefly confirm what was done
 - IMPORTANT: When creating a new intention, do NOT provide a date parameter unless the user explicitly specifies a different date. Let it default to today's date automatically.
-- Status fields: 'completed' (task done), 'neverminded' (gave up on task), 'sticky' (carry forward), 'froggy' (most important), 'anxiety_inducing' (causes stress)"""
+- Status fields: 'completed' (task done), 'neverminded' (gave up on task), 'sticky' (carry forward), 'froggy' (most important), 'anxiety_inducing' (causes stress)
+
+**Recurring Intention Guidelines:**
+- For weekly patterns: days_of_week uses 0=Monday, 1=Tuesday, ..., 6=Sunday
+- For monthly patterns: day_of_month (1-31) handles month-end gracefully (e.g., day 31 in Feb -> last day of Feb)
+- For yearly patterns: requires both month (1-12) and day_of_month (1-31)
+- Recurring patterns generate intentions via background job (not immediate)
+- Use 'pause' for temporary stops, 'delete' for permanent removal
+- Generated intentions remain if pattern is deleted (they just lose the link)"""
 
         return {
             'role': 'system',

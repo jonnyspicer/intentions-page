@@ -688,6 +688,565 @@ def delete_intention_executor(tool_input, user=None):
     }
 
 
+def create_recurring_intention_executor(tool_input, user=None):
+    """
+    Execute the create_recurring_intention tool.
+
+    Args:
+        tool_input: Dict with keys: title, frequency, interval, start_date, and pattern-specific fields
+        user: Django User object
+
+    Returns:
+        dict with result information
+
+    Raises:
+        ValueError: For validation errors
+    """
+    from intentions_page.models import RecurringIntention
+    from django.utils.dateparse import parse_date
+
+    # Validate title
+    title = tool_input.get('title', '').strip()
+    if not title:
+        raise ValueError("Title is required and cannot be empty")
+    if len(title) > 500:
+        raise ValueError("Title cannot exceed 500 characters")
+
+    # Validate frequency
+    frequency = tool_input.get('frequency')
+    valid_frequencies = ['daily', 'weekly', 'monthly', 'yearly']
+    if not frequency:
+        raise ValueError("frequency is required")
+    if frequency not in valid_frequencies:
+        raise ValueError(
+            f"Invalid frequency '{frequency}'. Must be one of: {', '.join(valid_frequencies)}"
+        )
+
+    # Validate interval
+    interval = tool_input.get('interval', 1)
+    if not isinstance(interval, int) or interval < 1:
+        raise ValueError("interval must be a positive integer (1 or greater)")
+
+    # Validate start_date
+    start_date_str = tool_input.get('start_date')
+    if not start_date_str:
+        raise ValueError("start_date is required")
+    start_date = parse_date(start_date_str)
+    if not start_date:
+        raise ValueError(f"Invalid start_date format: {start_date_str}. Use YYYY-MM-DD.")
+
+    # Validate end_date (optional)
+    end_date = None
+    end_date_str = tool_input.get('end_date')
+    if end_date_str:
+        end_date = parse_date(end_date_str)
+        if not end_date:
+            raise ValueError(f"Invalid end_date format: {end_date_str}. Use YYYY-MM-DD.")
+        if end_date < start_date:
+            raise ValueError("end_date cannot be before start_date")
+
+    # Frequency-specific validation
+    days_of_week = None
+    day_of_month = None
+    month = None
+
+    if frequency == 'weekly':
+        days_of_week = tool_input.get('days_of_week')
+        if not days_of_week:
+            raise ValueError("days_of_week is required for weekly frequency (list of 0-6, where 0=Monday)")
+        if not isinstance(days_of_week, list):
+            raise ValueError("days_of_week must be a list of integers (0-6)")
+        if not days_of_week:
+            raise ValueError("days_of_week cannot be empty")
+        for day in days_of_week:
+            if not isinstance(day, int) or day < 0 or day > 6:
+                raise ValueError("days_of_week must contain integers between 0 (Monday) and 6 (Sunday)")
+
+    elif frequency == 'monthly':
+        day_of_month = tool_input.get('day_of_month')
+        if not day_of_month:
+            raise ValueError("day_of_month is required for monthly frequency (1-31)")
+        if not isinstance(day_of_month, int) or day_of_month < 1 or day_of_month > 31:
+            raise ValueError("day_of_month must be an integer between 1 and 31")
+
+    elif frequency == 'yearly':
+        month = tool_input.get('month')
+        day_of_month = tool_input.get('day_of_month')
+        if not month:
+            raise ValueError("month is required for yearly frequency (1-12)")
+        if not day_of_month:
+            raise ValueError("day_of_month is required for yearly frequency (1-31)")
+        if not isinstance(month, int) or month < 1 or month > 12:
+            raise ValueError("month must be an integer between 1 and 12")
+        if not isinstance(day_of_month, int) or day_of_month < 1 or day_of_month > 31:
+            raise ValueError("day_of_month must be an integer between 1 and 31")
+
+    # Get default flags
+    default_sticky = tool_input.get('default_sticky', False)
+    default_froggy = tool_input.get('default_froggy', False)
+    default_anxiety_inducing = tool_input.get('default_anxiety_inducing', False)
+
+    # Create recurring intention
+    recurring_intention = RecurringIntention.objects.create(
+        title=title,
+        creator=user,
+        frequency=frequency,
+        interval=interval,
+        days_of_week=days_of_week,
+        day_of_month=day_of_month,
+        month=month,
+        start_date=start_date,
+        end_date=end_date,
+        is_active=True,
+        default_sticky=default_sticky,
+        default_froggy=default_froggy,
+        default_anxiety_inducing=default_anxiety_inducing
+    )
+
+    logger.info(
+        f"Created recurring intention #{recurring_intention.id} for user {user.id}: "
+        f"{title} ({frequency})"
+    )
+
+    # Build pattern description
+    if frequency == 'daily':
+        pattern = f"every {interval} day(s)" if interval > 1 else "daily"
+    elif frequency == 'weekly':
+        days_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        day_names = [days_names[d] for d in sorted(days_of_week)]
+        pattern = f"every {interval} week(s) on {', '.join(day_names)}" if interval > 1 else f"weekly on {', '.join(day_names)}"
+    elif frequency == 'monthly':
+        pattern = f"every {interval} month(s) on day {day_of_month}" if interval > 1 else f"monthly on day {day_of_month}"
+    elif frequency == 'yearly':
+        pattern = f"every {interval} year(s) on {month}/{day_of_month}" if interval > 1 else f"yearly on {month}/{day_of_month}"
+
+    return {
+        'recurring_intention_id': recurring_intention.id,
+        'title': recurring_intention.title,
+        'frequency': recurring_intention.frequency,
+        'pattern': pattern,
+        'start_date': recurring_intention.start_date.isoformat(),
+        'end_date': recurring_intention.end_date.isoformat() if recurring_intention.end_date else None,
+        'is_active': recurring_intention.is_active,
+        'message': f"Successfully created recurring intention: {title} ({pattern})"
+    }
+
+
+def list_recurring_intentions_executor(tool_input, user=None):
+    """
+    Execute the list_recurring_intentions tool.
+
+    Args:
+        tool_input: Dict with keys: active_only (optional, default True)
+        user: Django User object
+
+    Returns:
+        dict with result information
+
+    Raises:
+        ValueError: For validation errors
+    """
+    from intentions_page.models import RecurringIntention
+
+    active_only = tool_input.get('active_only', True)
+    if not isinstance(active_only, bool):
+        raise ValueError("active_only must be a boolean (true or false)")
+
+    # Query recurring intentions
+    recurring_intentions = RecurringIntention.objects.filter(creator=user)
+
+    if active_only:
+        recurring_intentions = recurring_intentions.filter(is_active=True)
+
+    recurring_intentions = recurring_intentions.order_by('created_datetime')
+
+    # Build result list
+    intentions_list = []
+    for ri in recurring_intentions:
+        # Build pattern description
+        if ri.frequency == 'daily':
+            pattern = f"every {ri.interval} day(s)" if ri.interval > 1 else "daily"
+        elif ri.frequency == 'weekly':
+            if ri.days_of_week:
+                days_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                day_names = [days_names[d] for d in sorted(ri.days_of_week)]
+                pattern = f"every {ri.interval} week(s) on {', '.join(day_names)}" if ri.interval > 1 else f"weekly on {', '.join(day_names)}"
+            else:
+                pattern = "weekly (no days configured)"
+        elif ri.frequency == 'monthly':
+            pattern = f"every {ri.interval} month(s) on day {ri.day_of_month}" if ri.interval > 1 else f"monthly on day {ri.day_of_month}"
+        elif ri.frequency == 'yearly':
+            pattern = f"every {ri.interval} year(s) on {ri.month}/{ri.day_of_month}" if ri.interval > 1 else f"yearly on {ri.month}/{ri.day_of_month}"
+
+        intentions_list.append({
+            'id': ri.id,
+            'title': ri.title,
+            'frequency': ri.frequency,
+            'pattern': pattern,
+            'start_date': ri.start_date.isoformat(),
+            'end_date': ri.end_date.isoformat() if ri.end_date else None,
+            'is_active': ri.is_active,
+            'default_sticky': ri.default_sticky,
+            'default_froggy': ri.default_froggy,
+            'default_anxiety_inducing': ri.default_anxiety_inducing,
+            'last_generated_date': ri.last_generated_date.isoformat() if ri.last_generated_date else None
+        })
+
+    logger.info(
+        f"Listed {len(intentions_list)} recurring intentions for user {user.id} "
+        f"(active_only={active_only})"
+    )
+
+    return {
+        'count': len(intentions_list),
+        'active_only': active_only,
+        'recurring_intentions': intentions_list,
+        'message': f"Found {len(intentions_list)} recurring intention(s)"
+    }
+
+
+def update_recurring_intention_executor(tool_input, user=None):
+    """
+    Execute the update_recurring_intention tool.
+
+    Args:
+        tool_input: Dict with keys: recurring_intention_id, and any fields to update
+        user: Django User object
+
+    Returns:
+        dict with result information
+
+    Raises:
+        ValueError: For validation errors
+    """
+    from intentions_page.models import RecurringIntention
+    from django.utils.dateparse import parse_date
+
+    recurring_intention_id = tool_input.get('recurring_intention_id')
+    if not recurring_intention_id:
+        raise ValueError("recurring_intention_id is required")
+
+    if not isinstance(recurring_intention_id, int):
+        raise ValueError("recurring_intention_id must be an integer")
+
+    # Get the recurring intention and verify ownership
+    try:
+        recurring_intention = RecurringIntention.objects.get(id=recurring_intention_id, creator=user)
+    except RecurringIntention.DoesNotExist:
+        raise ValueError(
+            f"Recurring intention with ID {recurring_intention_id} not found or doesn't belong to you"
+        )
+
+    # Track what changed
+    changes = []
+
+    # Update title if provided
+    new_title = tool_input.get('title')
+    if new_title is not None:
+        new_title = new_title.strip()
+        if not new_title:
+            raise ValueError("Title cannot be empty")
+        if len(new_title) > 500:
+            raise ValueError("Title cannot exceed 500 characters")
+
+        if new_title != recurring_intention.title:
+            old_title = recurring_intention.title
+            recurring_intention.title = new_title
+            changes.append(f"title: '{old_title}' -> '{new_title}'")
+
+    # Update frequency if provided
+    new_frequency = tool_input.get('frequency')
+    if new_frequency is not None:
+        valid_frequencies = ['daily', 'weekly', 'monthly', 'yearly']
+        if new_frequency not in valid_frequencies:
+            raise ValueError(
+                f"Invalid frequency '{new_frequency}'. Must be one of: {', '.join(valid_frequencies)}"
+            )
+        if new_frequency != recurring_intention.frequency:
+            old_frequency = recurring_intention.frequency
+            recurring_intention.frequency = new_frequency
+            changes.append(f"frequency: {old_frequency} -> {new_frequency}")
+
+    # Update interval if provided
+    new_interval = tool_input.get('interval')
+    if new_interval is not None:
+        if not isinstance(new_interval, int) or new_interval < 1:
+            raise ValueError("interval must be a positive integer (1 or greater)")
+        if new_interval != recurring_intention.interval:
+            old_interval = recurring_intention.interval
+            recurring_intention.interval = new_interval
+            changes.append(f"interval: {old_interval} -> {new_interval}")
+
+    # Update start_date if provided
+    new_start_date_str = tool_input.get('start_date')
+    if new_start_date_str is not None:
+        new_start_date = parse_date(new_start_date_str)
+        if not new_start_date:
+            raise ValueError(f"Invalid start_date format: {new_start_date_str}. Use YYYY-MM-DD.")
+        if new_start_date != recurring_intention.start_date:
+            old_start_date = recurring_intention.start_date
+            recurring_intention.start_date = new_start_date
+            changes.append(f"start_date: {old_start_date.isoformat()} -> {new_start_date.isoformat()}")
+
+    # Update end_date if provided
+    new_end_date_str = tool_input.get('end_date')
+    if new_end_date_str is not None:
+        new_end_date = parse_date(new_end_date_str)
+        if not new_end_date:
+            raise ValueError(f"Invalid end_date format: {new_end_date_str}. Use YYYY-MM-DD.")
+        if new_end_date < recurring_intention.start_date:
+            raise ValueError("end_date cannot be before start_date")
+        if new_end_date != recurring_intention.end_date:
+            old_end_date = recurring_intention.end_date
+            recurring_intention.end_date = new_end_date
+            changes.append(f"end_date: {old_end_date.isoformat() if old_end_date else 'None'} -> {new_end_date.isoformat()}")
+
+    # Update pattern-specific fields
+    new_days_of_week = tool_input.get('days_of_week')
+    if new_days_of_week is not None:
+        if not isinstance(new_days_of_week, list):
+            raise ValueError("days_of_week must be a list of integers (0-6)")
+        if not new_days_of_week:
+            raise ValueError("days_of_week cannot be empty")
+        for day in new_days_of_week:
+            if not isinstance(day, int) or day < 0 or day > 6:
+                raise ValueError("days_of_week must contain integers between 0 (Monday) and 6 (Sunday)")
+        if new_days_of_week != recurring_intention.days_of_week:
+            recurring_intention.days_of_week = new_days_of_week
+            changes.append(f"days_of_week: {recurring_intention.days_of_week} -> {new_days_of_week}")
+
+    new_day_of_month = tool_input.get('day_of_month')
+    if new_day_of_month is not None:
+        if not isinstance(new_day_of_month, int) or new_day_of_month < 1 or new_day_of_month > 31:
+            raise ValueError("day_of_month must be an integer between 1 and 31")
+        if new_day_of_month != recurring_intention.day_of_month:
+            old_day = recurring_intention.day_of_month
+            recurring_intention.day_of_month = new_day_of_month
+            changes.append(f"day_of_month: {old_day} -> {new_day_of_month}")
+
+    new_month = tool_input.get('month')
+    if new_month is not None:
+        if not isinstance(new_month, int) or new_month < 1 or new_month > 12:
+            raise ValueError("month must be an integer between 1 and 12")
+        if new_month != recurring_intention.month:
+            old_month = recurring_intention.month
+            recurring_intention.month = new_month
+            changes.append(f"month: {old_month} -> {new_month}")
+
+    # Update default flags if provided
+    new_default_sticky = tool_input.get('default_sticky')
+    if new_default_sticky is not None:
+        if not isinstance(new_default_sticky, bool):
+            raise ValueError("default_sticky must be a boolean")
+        if new_default_sticky != recurring_intention.default_sticky:
+            recurring_intention.default_sticky = new_default_sticky
+            changes.append(f"default_sticky: {not new_default_sticky} -> {new_default_sticky}")
+
+    new_default_froggy = tool_input.get('default_froggy')
+    if new_default_froggy is not None:
+        if not isinstance(new_default_froggy, bool):
+            raise ValueError("default_froggy must be a boolean")
+        if new_default_froggy != recurring_intention.default_froggy:
+            recurring_intention.default_froggy = new_default_froggy
+            changes.append(f"default_froggy: {not new_default_froggy} -> {new_default_froggy}")
+
+    new_default_anxiety_inducing = tool_input.get('default_anxiety_inducing')
+    if new_default_anxiety_inducing is not None:
+        if not isinstance(new_default_anxiety_inducing, bool):
+            raise ValueError("default_anxiety_inducing must be a boolean")
+        if new_default_anxiety_inducing != recurring_intention.default_anxiety_inducing:
+            recurring_intention.default_anxiety_inducing = new_default_anxiety_inducing
+            changes.append(f"default_anxiety_inducing: {not new_default_anxiety_inducing} -> {new_default_anxiety_inducing}")
+
+    # Check if any changes were made
+    if not changes:
+        return {
+            'recurring_intention_id': recurring_intention.id,
+            'title': recurring_intention.title,
+            'changes': [],
+            'message': "No changes made - recurring intention already has the specified values"
+        }
+
+    # Save the changes
+    recurring_intention.save()
+
+    logger.info(
+        f"Updated recurring intention #{recurring_intention.id} for user {user.id}: {', '.join(changes)}"
+    )
+
+    return {
+        'recurring_intention_id': recurring_intention.id,
+        'title': recurring_intention.title,
+        'changes': changes,
+        'message': f"Successfully updated recurring intention: {', '.join(changes)}"
+    }
+
+
+def pause_recurring_intention_executor(tool_input, user=None):
+    """
+    Execute the pause_recurring_intention tool.
+
+    Args:
+        tool_input: Dict with keys: recurring_intention_id (int)
+        user: Django User object
+
+    Returns:
+        dict with result information
+
+    Raises:
+        ValueError: For validation errors
+    """
+    from intentions_page.models import RecurringIntention
+
+    recurring_intention_id = tool_input.get('recurring_intention_id')
+    if not recurring_intention_id:
+        raise ValueError("recurring_intention_id is required")
+
+    if not isinstance(recurring_intention_id, int):
+        raise ValueError("recurring_intention_id must be an integer")
+
+    # Get the recurring intention and verify ownership
+    try:
+        recurring_intention = RecurringIntention.objects.get(id=recurring_intention_id, creator=user)
+    except RecurringIntention.DoesNotExist:
+        raise ValueError(
+            f"Recurring intention with ID {recurring_intention_id} not found or doesn't belong to you"
+        )
+
+    # Check if already paused
+    if not recurring_intention.is_active:
+        logger.info(
+            f"Recurring intention #{recurring_intention.id} already paused for user {user.id}"
+        )
+        return {
+            'recurring_intention_id': recurring_intention.id,
+            'title': recurring_intention.title,
+            'is_active': False,
+            'message': f"Recurring intention was already paused: {recurring_intention.title}"
+        }
+
+    # Pause the recurring intention
+    recurring_intention.is_active = False
+    recurring_intention.save()
+
+    logger.info(f"Paused recurring intention #{recurring_intention.id} for user {user.id}")
+
+    return {
+        'recurring_intention_id': recurring_intention.id,
+        'title': recurring_intention.title,
+        'is_active': False,
+        'message': f"Successfully paused recurring intention: {recurring_intention.title}"
+    }
+
+
+def resume_recurring_intention_executor(tool_input, user=None):
+    """
+    Execute the resume_recurring_intention tool.
+
+    Args:
+        tool_input: Dict with keys: recurring_intention_id (int)
+        user: Django User object
+
+    Returns:
+        dict with result information
+
+    Raises:
+        ValueError: For validation errors
+    """
+    from intentions_page.models import RecurringIntention
+
+    recurring_intention_id = tool_input.get('recurring_intention_id')
+    if not recurring_intention_id:
+        raise ValueError("recurring_intention_id is required")
+
+    if not isinstance(recurring_intention_id, int):
+        raise ValueError("recurring_intention_id must be an integer")
+
+    # Get the recurring intention and verify ownership
+    try:
+        recurring_intention = RecurringIntention.objects.get(id=recurring_intention_id, creator=user)
+    except RecurringIntention.DoesNotExist:
+        raise ValueError(
+            f"Recurring intention with ID {recurring_intention_id} not found or doesn't belong to you"
+        )
+
+    # Check if already active
+    if recurring_intention.is_active:
+        logger.info(
+            f"Recurring intention #{recurring_intention.id} already active for user {user.id}"
+        )
+        return {
+            'recurring_intention_id': recurring_intention.id,
+            'title': recurring_intention.title,
+            'is_active': True,
+            'message': f"Recurring intention was already active: {recurring_intention.title}"
+        }
+
+    # Resume the recurring intention
+    recurring_intention.is_active = True
+    recurring_intention.save()
+
+    logger.info(f"Resumed recurring intention #{recurring_intention.id} for user {user.id}")
+
+    return {
+        'recurring_intention_id': recurring_intention.id,
+        'title': recurring_intention.title,
+        'is_active': True,
+        'message': f"Successfully resumed recurring intention: {recurring_intention.title}"
+    }
+
+
+def delete_recurring_intention_executor(tool_input, user=None):
+    """
+    Execute the delete_recurring_intention tool.
+
+    Args:
+        tool_input: Dict with keys: recurring_intention_id (int)
+        user: Django User object
+
+    Returns:
+        dict with result information
+
+    Raises:
+        ValueError: For validation errors
+    """
+    from intentions_page.models import RecurringIntention
+
+    recurring_intention_id = tool_input.get('recurring_intention_id')
+    if not recurring_intention_id:
+        raise ValueError("recurring_intention_id is required")
+
+    if not isinstance(recurring_intention_id, int):
+        raise ValueError("recurring_intention_id must be an integer")
+
+    # Get the recurring intention and verify ownership
+    try:
+        recurring_intention = RecurringIntention.objects.get(id=recurring_intention_id, creator=user)
+    except RecurringIntention.DoesNotExist:
+        raise ValueError(
+            f"Recurring intention with ID {recurring_intention_id} not found or doesn't belong to you"
+        )
+
+    # Store details before deletion for logging and response
+    recurring_intention_title = recurring_intention.title
+    recurring_intention_id_str = recurring_intention.id
+
+    # Delete the recurring intention
+    # Generated intentions keep their data but lose the link (SET_NULL behavior)
+    recurring_intention.delete()
+
+    logger.info(
+        f"Deleted recurring intention #{recurring_intention_id_str} for user {user.id}: "
+        f"{recurring_intention_title}"
+    )
+
+    return {
+        'recurring_intention_id': recurring_intention_id_str,
+        'title': recurring_intention_title,
+        'message': f"Successfully deleted recurring intention: {recurring_intention_title}"
+    }
+
+
 TOOL_REGISTRY = {
     'create_intention': {
         'schema': {
@@ -912,6 +1471,211 @@ TOOL_REGISTRY = {
             }
         },
         'executor': delete_intention_executor,
+        'requires_user': True
+    },
+    'create_recurring_intention': {
+        'schema': {
+            'name': 'create_recurring_intention',
+            'description': 'Create a recurring intention pattern that automatically generates intentions on specified dates. Use when user wants to set up tasks that repeat daily, weekly, monthly, or yearly. Generated intentions are created by a background job.',
+            'input_schema': {
+                'type': 'object',
+                'properties': {
+                    'title': {
+                        'type': 'string',
+                        'description': 'Title of the recurring intention (max 500 characters)'
+                    },
+                    'frequency': {
+                        'type': 'string',
+                        'description': 'How often to repeat',
+                        'enum': ['daily', 'weekly', 'monthly', 'yearly']
+                    },
+                    'interval': {
+                        'type': 'integer',
+                        'description': 'Repeat every N days/weeks/months/years (default: 1)',
+                        'default': 1
+                    },
+                    'start_date': {
+                        'type': 'string',
+                        'description': 'When to start generating intentions (YYYY-MM-DD format)'
+                    },
+                    'end_date': {
+                        'type': 'string',
+                        'description': 'Optional end date (YYYY-MM-DD format). If not provided, pattern continues indefinitely.'
+                    },
+                    'days_of_week': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'integer'
+                        },
+                        'description': 'For weekly frequency: list of weekdays [0-6] where 0=Monday, 6=Sunday. Required for weekly.'
+                    },
+                    'day_of_month': {
+                        'type': 'integer',
+                        'description': 'For monthly/yearly frequency: day of month (1-31). Required for monthly and yearly. Handles month-end gracefully.'
+                    },
+                    'month': {
+                        'type': 'integer',
+                        'description': 'For yearly frequency: month (1-12). Required for yearly.'
+                    },
+                    'default_sticky': {
+                        'type': 'boolean',
+                        'description': 'Should generated intentions be sticky by default',
+                        'default': False
+                    },
+                    'default_froggy': {
+                        'type': 'boolean',
+                        'description': 'Should generated intentions be frogs by default (only if no other frog exists)',
+                        'default': False
+                    },
+                    'default_anxiety_inducing': {
+                        'type': 'boolean',
+                        'description': 'Should generated intentions be marked as anxiety-inducing by default',
+                        'default': False
+                    }
+                },
+                'required': ['title', 'frequency', 'start_date']
+            }
+        },
+        'executor': create_recurring_intention_executor,
+        'requires_user': True
+    },
+    'list_recurring_intentions': {
+        'schema': {
+            'name': 'list_recurring_intentions',
+            'description': 'List all recurring intention patterns for the user. Use when user wants to see their recurring tasks or scheduled patterns.',
+            'input_schema': {
+                'type': 'object',
+                'properties': {
+                    'active_only': {
+                        'type': 'boolean',
+                        'description': 'If true, only show active patterns. If false, show all including paused patterns. Default: true',
+                        'default': True
+                    }
+                },
+                'required': []
+            }
+        },
+        'executor': list_recurring_intentions_executor,
+        'requires_user': True
+    },
+    'update_recurring_intention': {
+        'schema': {
+            'name': 'update_recurring_intention',
+            'description': 'Update an existing recurring intention pattern. Use when user wants to modify any aspect of a recurring task. Can update title, frequency, dates, pattern settings, or default flags.',
+            'input_schema': {
+                'type': 'object',
+                'properties': {
+                    'recurring_intention_id': {
+                        'type': 'integer',
+                        'description': 'ID of the recurring intention to update'
+                    },
+                    'title': {
+                        'type': 'string',
+                        'description': 'New title (optional, max 500 characters)'
+                    },
+                    'frequency': {
+                        'type': 'string',
+                        'description': 'New frequency (optional)',
+                        'enum': ['daily', 'weekly', 'monthly', 'yearly']
+                    },
+                    'interval': {
+                        'type': 'integer',
+                        'description': 'New interval (optional, must be positive integer)'
+                    },
+                    'start_date': {
+                        'type': 'string',
+                        'description': 'New start date (optional, YYYY-MM-DD format)'
+                    },
+                    'end_date': {
+                        'type': 'string',
+                        'description': 'New end date (optional, YYYY-MM-DD format)'
+                    },
+                    'days_of_week': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'integer'
+                        },
+                        'description': 'New days of week for weekly patterns (optional, 0-6)'
+                    },
+                    'day_of_month': {
+                        'type': 'integer',
+                        'description': 'New day of month for monthly/yearly (optional, 1-31)'
+                    },
+                    'month': {
+                        'type': 'integer',
+                        'description': 'New month for yearly patterns (optional, 1-12)'
+                    },
+                    'default_sticky': {
+                        'type': 'boolean',
+                        'description': 'New default sticky flag (optional)'
+                    },
+                    'default_froggy': {
+                        'type': 'boolean',
+                        'description': 'New default froggy flag (optional)'
+                    },
+                    'default_anxiety_inducing': {
+                        'type': 'boolean',
+                        'description': 'New default anxiety-inducing flag (optional)'
+                    }
+                },
+                'required': ['recurring_intention_id']
+            }
+        },
+        'executor': update_recurring_intention_executor,
+        'requires_user': True
+    },
+    'pause_recurring_intention': {
+        'schema': {
+            'name': 'pause_recurring_intention',
+            'description': 'Pause a recurring intention pattern to temporarily stop generating intentions. Use when user wants to temporarily disable a recurring task without deleting it. Paused patterns can be resumed later.',
+            'input_schema': {
+                'type': 'object',
+                'properties': {
+                    'recurring_intention_id': {
+                        'type': 'integer',
+                        'description': 'ID of the recurring intention to pause'
+                    }
+                },
+                'required': ['recurring_intention_id']
+            }
+        },
+        'executor': pause_recurring_intention_executor,
+        'requires_user': True
+    },
+    'resume_recurring_intention': {
+        'schema': {
+            'name': 'resume_recurring_intention',
+            'description': 'Resume a paused recurring intention pattern to restart generating intentions. Use when user wants to reactivate a previously paused recurring task.',
+            'input_schema': {
+                'type': 'object',
+                'properties': {
+                    'recurring_intention_id': {
+                        'type': 'integer',
+                        'description': 'ID of the recurring intention to resume'
+                    }
+                },
+                'required': ['recurring_intention_id']
+            }
+        },
+        'executor': resume_recurring_intention_executor,
+        'requires_user': True
+    },
+    'delete_recurring_intention': {
+        'schema': {
+            'name': 'delete_recurring_intention',
+            'description': 'Permanently delete a recurring intention pattern. Use when user wants to completely remove a recurring task. Generated intentions remain but lose their link to the pattern. This cannot be undone.',
+            'input_schema': {
+                'type': 'object',
+                'properties': {
+                    'recurring_intention_id': {
+                        'type': 'integer',
+                        'description': 'ID of the recurring intention to delete'
+                    }
+                },
+                'required': ['recurring_intention_id']
+            }
+        },
+        'executor': delete_recurring_intention_executor,
         'requires_user': True
     }
 }

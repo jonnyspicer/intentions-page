@@ -19,6 +19,13 @@ class Intention(models.Model):
     order = models.IntegerField(default=0, db_index=True)
 
     creator = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    recurring_intention = models.ForeignKey(
+        'RecurringIntention',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='generated_intentions'
+    )
 
     completed = models.BooleanField(default=False)
     neverminded = models.BooleanField(default=False)
@@ -135,3 +142,206 @@ class AgentAction(models.Model):
     def __str__(self):
         status = "✓" if self.success else "✗"
         return f"{status} {self.tool_name} by {self.user.username} at {self.timestamp}"
+
+
+class RecurringIntention(models.Model):
+    """
+    Defines a recurring pattern for automatically generating intentions.
+    Supports daily, weekly, monthly, and yearly recurrence patterns.
+    """
+    # Core Fields
+    title = models.CharField(max_length=500)
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+
+    # Frequency Configuration
+    FREQUENCY_CHOICES = [
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+        ('yearly', 'Yearly'),
+    ]
+    frequency = models.CharField(max_length=10, choices=FREQUENCY_CHOICES)
+    interval = models.PositiveIntegerField(default=1)  # Every N days/weeks/months/years
+
+    # Pattern-specific fields
+    days_of_week = models.JSONField(null=True, blank=True)  # [0-6] for weekly (0=Monday)
+    day_of_month = models.PositiveIntegerField(null=True, blank=True)  # 1-31 for monthly
+    month = models.PositiveIntegerField(null=True, blank=True)  # 1-12 for yearly
+
+    # Active Period
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)  # Optional
+
+    # Status
+    is_active = models.BooleanField(default=True, db_index=True)
+
+    # Default Flags for Generated Intentions
+    default_sticky = models.BooleanField(default=False)
+    default_froggy = models.BooleanField(default=False)
+    default_anxiety_inducing = models.BooleanField(default=False)
+
+    # Metadata
+    created_datetime = models.DateTimeField(default=timezone.now)
+    last_generated_date = models.DateField(null=True, blank=True)  # Track last generation
+
+    class Meta:
+        ordering = ['created_datetime']
+        indexes = [
+            models.Index(fields=['creator', 'is_active']),
+            models.Index(fields=['is_active', 'frequency']),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.get_frequency_display()})"
+
+    def should_generate_for_date(self, target_date):
+        """
+        Determine if an intention should be generated for the given date.
+
+        Args:
+            target_date: datetime.date object
+
+        Returns:
+            (bool, str): (should_generate, reason_message)
+        """
+        import calendar
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        # Check if active
+        if not self.is_active:
+            return False, "Recurring intention is not active"
+
+        # Check if before start_date
+        if target_date < self.start_date:
+            return False, f"Date {target_date} is before start date {self.start_date}"
+
+        # Check if after end_date (if set)
+        if self.end_date and target_date > self.end_date:
+            return False, f"Date {target_date} is after end date {self.end_date}"
+
+        # Frequency-specific logic
+        if self.frequency == 'daily':
+            # Check interval: should generate every N days from start_date
+            days_diff = (target_date - self.start_date).days
+            if days_diff % self.interval == 0:
+                return True, f"Daily pattern matches (every {self.interval} day(s))"
+            return False, f"Daily interval {self.interval} doesn't match"
+
+        elif self.frequency == 'weekly':
+            # Check if target_date.weekday() is in days_of_week
+            if not self.days_of_week:
+                return False, "No days of week configured"
+
+            weekday = target_date.weekday()  # 0=Monday, 6=Sunday
+            if weekday in self.days_of_week:
+                # Calculate weeks from the first occurrence of this weekday on or after start_date
+                days_until_weekday = (weekday - self.start_date.weekday()) % 7
+                first_occurrence = self.start_date + timezone.timedelta(days=days_until_weekday)
+
+                # Check if target_date is before the first occurrence
+                if target_date < first_occurrence:
+                    return False, f"Date is before first occurrence ({first_occurrence})"
+
+                # Check interval (every N weeks from first occurrence)
+                weeks_diff = (target_date - first_occurrence).days // 7
+                if weeks_diff % self.interval == 0:
+                    return True, f"Weekly pattern matches (weekday {weekday})"
+            return False, f"Weekly pattern doesn't match"
+
+        elif self.frequency == 'monthly':
+            # Check if target_date.day matches day_of_month
+            if not self.day_of_month:
+                return False, "No day of month configured"
+
+            # Handle month-end edge cases (e.g., Feb 30 -> last day of Feb)
+            last_day_of_month = calendar.monthrange(target_date.year, target_date.month)[1]
+            target_day = min(self.day_of_month, last_day_of_month)
+
+            if target_date.day == target_day:
+                # Check interval (every N months from start_date)
+                months_diff = (target_date.year - self.start_date.year) * 12 + (target_date.month - self.start_date.month)
+                if months_diff % self.interval == 0:
+                    return True, f"Monthly pattern matches (day {target_day})"
+            return False, f"Monthly pattern doesn't match"
+
+        elif self.frequency == 'yearly':
+            # Check if target_date matches month + day_of_month
+            if self.month and self.day_of_month:
+                # Handle leap year edge cases
+                last_day_of_month = calendar.monthrange(target_date.year, self.month)[1]
+                target_day = min(self.day_of_month, last_day_of_month)
+
+                if target_date.month == self.month and target_date.day == target_day:
+                    # Check interval (every N years)
+                    years_diff = target_date.year - self.start_date.year
+                    if years_diff % self.interval == 0:
+                        return True, f"Yearly pattern matches ({self.month}/{target_day})"
+            return False, f"Yearly pattern doesn't match"
+
+        return False, "Unknown frequency"
+
+    def generate_intention_for_date(self, target_date):
+        """
+        Generate an Intention for target_date if it doesn't already exist.
+
+        Args:
+            target_date: datetime.date object
+
+        Returns:
+            Intention instance if created, None if duplicate exists or shouldn't generate
+        """
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        should_generate, reason = self.should_generate_for_date(target_date)
+
+        if not should_generate:
+            logger.debug(f"Not generating for {target_date}: {reason}")
+            return None
+
+        # Handle froggy constraint: can't create frog if one exists for this date
+        if self.default_froggy:
+            existing_frog = Intention.objects.filter(
+                creator=self.creator,
+                date=target_date,
+                froggy=True
+            ).exists()
+
+            if existing_frog:
+                logger.warning(
+                    f"Skipping frog creation for {target_date}: frog already exists. "
+                    f"Recurring pattern: {self.title}"
+                )
+                return None
+
+        # Use get_or_create to prevent race conditions
+        intention, created = Intention.objects.get_or_create(
+            creator=self.creator,
+            date=target_date,
+            title=self.title,
+            recurring_intention=self,
+            defaults={
+                'sticky': self.default_sticky,
+                'froggy': self.default_froggy,
+                'anxiety_inducing': self.default_anxiety_inducing,
+                'completed': False,
+                'neverminded': False
+            }
+        )
+
+        if not created:
+            logger.debug(f"Intention already exists for {target_date}: {self.title}")
+            return None
+
+        # Update last_generated_date
+        self.last_generated_date = target_date
+        self.save(update_fields=['last_generated_date'])
+
+        logger.info(
+            f"Generated recurring intention #{intention.id} for {target_date}: {self.title}"
+        )
+
+        return intention
