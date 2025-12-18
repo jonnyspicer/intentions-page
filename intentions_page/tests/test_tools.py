@@ -1230,3 +1230,177 @@ class DeleteIntentionExecutorTest(TestCase):
         self.assertTrue(Intention.objects.filter(id=other_intention.id).exists())
         other_intention.refresh_from_db()
         self.assertEqual(other_intention.title, 'Other task')
+
+
+class AgentActionLoggingTest(TestCase):
+    """Tests for AgentAction logging in ToolExecutor"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='otherpass123'
+        )
+        self.today = get_working_day_date()
+
+    def test_successful_tool_execution_creates_agent_action(self):
+        """Verify that successful tool execution creates an AgentAction record"""
+        from intentions_page.models import AgentAction
+
+        # Start with no AgentActions
+        self.assertEqual(AgentAction.objects.count(), 0)
+
+        # Execute a tool
+        executor = ToolExecutor(user=self.user)
+        tool_input = {'title': 'Test task'}
+        result = executor.execute('create_intention', tool_input)
+
+        # Verify success
+        self.assertTrue(result['success'])
+
+        # Verify AgentAction was created
+        self.assertEqual(AgentAction.objects.count(), 1)
+
+        action = AgentAction.objects.first()
+        self.assertEqual(action.user, self.user)
+        self.assertEqual(action.tool_name, 'create_intention')
+        self.assertEqual(action.tool_input, tool_input)
+        self.assertEqual(action.tool_output['title'], 'Test task')
+        self.assertTrue(action.success)
+        self.assertIsNone(action.error)
+        self.assertIsNotNone(action.timestamp)
+
+    def test_failed_tool_execution_creates_agent_action(self):
+        """Verify that failed tool execution creates an AgentAction record with error"""
+        from intentions_page.models import AgentAction
+
+        # Start with no AgentActions
+        self.assertEqual(AgentAction.objects.count(), 0)
+
+        # Execute a tool that will fail (empty title)
+        executor = ToolExecutor(user=self.user)
+        tool_input = {'title': '   '}  # Empty title
+        result = executor.execute('create_intention', tool_input)
+
+        # Verify failure
+        self.assertFalse(result['success'])
+
+        # Verify AgentAction was created with error
+        self.assertEqual(AgentAction.objects.count(), 1)
+
+        action = AgentAction.objects.first()
+        self.assertEqual(action.user, self.user)
+        self.assertEqual(action.tool_name, 'create_intention')
+        self.assertEqual(action.tool_input, tool_input)
+        self.assertIsNone(action.tool_output)
+        self.assertFalse(action.success)
+        self.assertIn('Title is required', action.error)
+        self.assertIsNotNone(action.timestamp)
+
+    def test_multiple_tool_executions_create_multiple_actions(self):
+        """Verify that multiple tool executions create multiple AgentAction records"""
+        from intentions_page.models import AgentAction
+
+        executor = ToolExecutor(user=self.user)
+
+        # Execute tool 3 times
+        for i in range(3):
+            tool_input = {'title': f'Task {i+1}'}
+            executor.execute('create_intention', tool_input)
+
+        # Verify 3 AgentActions were created
+        self.assertEqual(AgentAction.objects.count(), 3)
+        self.assertEqual(AgentAction.objects.filter(user=self.user).count(), 3)
+
+        # Verify they're ordered by timestamp (newest first)
+        actions = list(AgentAction.objects.all())
+        self.assertGreaterEqual(actions[0].timestamp, actions[1].timestamp)
+        self.assertGreaterEqual(actions[1].timestamp, actions[2].timestamp)
+
+    def test_agent_action_user_isolation(self):
+        """Verify that AgentActions respect user isolation"""
+        from intentions_page.models import AgentAction
+
+        # User 1 executes a tool
+        executor1 = ToolExecutor(user=self.user)
+        executor1.execute('create_intention', {'title': 'User1 task'})
+
+        # User 2 executes a tool
+        executor2 = ToolExecutor(user=self.other_user)
+        executor2.execute('create_intention', {'title': 'User2 task'})
+
+        # Verify each user has only their own actions
+        user1_actions = AgentAction.objects.filter(user=self.user)
+        user2_actions = AgentAction.objects.filter(user=self.other_user)
+
+        self.assertEqual(user1_actions.count(), 1)
+        self.assertEqual(user2_actions.count(), 1)
+
+        self.assertEqual(user1_actions.first().tool_input['title'], 'User1 task')
+        self.assertEqual(user2_actions.first().tool_input['title'], 'User2 task')
+
+    def test_agent_action_without_user_does_not_create_record(self):
+        """Verify that tool execution without a user doesn't create AgentAction"""
+        from intentions_page.models import AgentAction
+
+        # Execute tool without user (should fail anyway for requires_user tools)
+        executor = ToolExecutor(user=None)
+        result = executor.execute('create_intention', {'title': 'Test'})
+
+        # Tool should fail due to missing user
+        self.assertFalse(result['success'])
+
+        # No AgentAction should be created
+        self.assertEqual(AgentAction.objects.count(), 0)
+
+    def test_agent_action_captures_complex_tool_output(self):
+        """Verify that AgentAction correctly stores complex JSON tool output"""
+        from intentions_page.models import AgentAction
+
+        executor = ToolExecutor(user=self.user)
+
+        # Create an intention (returns complex output)
+        tool_input = {
+            'title': 'Complex task',
+            'froggy': True,
+            'sticky': True,
+            'anxiety_inducing': True
+        }
+        result = executor.execute('create_intention', tool_input)
+
+        # Verify AgentAction captured the full output
+        action = AgentAction.objects.first()
+        self.assertIsNotNone(action.tool_output)
+        self.assertEqual(action.tool_output['title'], 'Complex task')
+        self.assertTrue(action.tool_output['froggy'])
+        self.assertTrue(action.tool_output['sticky'])
+        self.assertTrue(action.tool_output['anxiety_inducing'])
+        self.assertIn('intention_id', action.tool_output)
+
+    def test_agent_action_string_representation(self):
+        """Verify AgentAction __str__ method works correctly"""
+        from intentions_page.models import AgentAction
+
+        executor = ToolExecutor(user=self.user)
+
+        # Successful execution
+        executor.execute('create_intention', {'title': 'Success task'})
+        action = AgentAction.objects.first()
+        action_str = str(action)
+
+        self.assertIn('✓', action_str)  # Success symbol
+        self.assertIn('create_intention', action_str)
+        self.assertIn('test@example.com', action_str)  # User's email
+
+        # Failed execution
+        executor.execute('create_intention', {'title': ''})
+        failed_action = AgentAction.objects.filter(success=False).first()
+        failed_str = str(failed_action)
+
+        self.assertIn('✗', failed_str)  # Failure symbol
+        self.assertIn('create_intention', failed_str)
