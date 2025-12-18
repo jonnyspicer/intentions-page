@@ -221,9 +221,10 @@ You have access to these tools:
 1. 'create_intention' - Create a new intention/task
 2. 'update_intention_status' - Update status of an intention (mark completed, sticky, froggy, anxiety-inducing, neverminded)
 3. 'update_intention' - Update an intention's title and/or date
-4. 'reorder_intentions' - Reorder intentions by priority
-5. 'list_intentions' - List all intentions for a date with optional status filtering
-6. 'get_intention_details' - Get detailed information about a specific intention by ID
+4. 'delete_intention' - Delete an intention permanently
+5. 'reorder_intentions' - Reorder intentions by priority
+6. 'list_intentions' - List all intentions for a date with optional status filtering
+7. 'get_intention_details' - Get detailed information about a specific intention by ID
 
 Guidelines:
 - Only use tools when explicitly or implicitly requested
@@ -231,6 +232,7 @@ Guidelines:
 - When creating a "frog" (most important task), remember only one per day is allowed
 - When updating, use the intention IDs shown in parentheses (e.g., "ID: 123")
 - Use 'update_intention' to change title or date, 'update_intention_status' for status flags
+- Use 'delete_intention' to permanently remove an intention (cannot be undone)
 - Use 'list_intentions' to see what intentions exist before updating or reordering them
 - After using a tool, briefly confirm what was done
 - IMPORTANT: When creating a new intention, do NOT provide a date parameter unless the user explicitly specifies a different date. Let it default to today's date automatically.

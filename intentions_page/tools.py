@@ -497,6 +497,55 @@ def update_intention_executor(tool_input, user=None):
     }
 
 
+def delete_intention_executor(tool_input, user=None):
+    """
+    Execute the delete_intention tool.
+
+    Args:
+        tool_input: Dict with keys: intention_id (int)
+        user: Django User object
+
+    Returns:
+        dict with result information
+
+    Raises:
+        ValueError: For validation errors
+    """
+    from intentions_page.models import Intention
+
+    intention_id = tool_input.get('intention_id')
+    if not intention_id:
+        raise ValueError("intention_id is required")
+
+    if not isinstance(intention_id, int):
+        raise ValueError("intention_id must be an integer")
+
+    # Get the intention and verify ownership
+    try:
+        intention = Intention.objects.get(id=intention_id, creator=user)
+    except Intention.DoesNotExist:
+        raise ValueError(
+            f"Intention with ID {intention_id} not found or doesn't belong to you"
+        )
+
+    # Store intention details before deletion for logging and response
+    intention_title = intention.title
+    intention_date = intention.date.isoformat()
+    intention_id_str = intention.id
+
+    # Delete the intention
+    intention.delete()
+
+    logger.info(f"Deleted intention #{intention_id_str} for user {user.id}: {intention_title}")
+
+    return {
+        'intention_id': intention_id_str,
+        'title': intention_title,
+        'date': intention_date,
+        'message': f"Successfully deleted intention: {intention_title}"
+    }
+
+
 TOOL_REGISTRY = {
     'create_intention': {
         'schema': {
@@ -652,6 +701,24 @@ TOOL_REGISTRY = {
             }
         },
         'executor': update_intention_executor,
+        'requires_user': True
+    },
+    'delete_intention': {
+        'schema': {
+            'name': 'delete_intention',
+            'description': 'Delete an intention permanently. Use when user wants to remove, delete, or get rid of a task entirely. This is permanent and cannot be undone.',
+            'input_schema': {
+                'type': 'object',
+                'properties': {
+                    'intention_id': {
+                        'type': 'integer',
+                        'description': 'ID of the intention to delete (shown in parentheses like "ID: 123")'
+                    }
+                },
+                'required': ['intention_id']
+            }
+        },
+        'executor': delete_intention_executor,
         'requires_user': True
     }
 }
