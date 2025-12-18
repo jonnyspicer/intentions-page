@@ -47,6 +47,40 @@ class Intention(models.Model):
         else:
             return 'active'
 
+    @property
+    def is_recurring(self):
+        """Check if this intention has an associated recurring pattern"""
+        if self.recurring_intention:
+            return self.recurring_intention.is_active
+        return False
+
+    def get_or_create_recurring_pattern(self):
+        """Get or create a daily RecurringIntention pattern for this intention"""
+        if self.recurring_intention:
+            return self.recurring_intention, False
+
+        # Create a new daily recurring pattern
+        recurring = RecurringIntention.objects.create(
+            title=self.title,
+            creator=self.creator,
+            frequency='daily',
+            interval=1,
+            start_date=self.date,
+            is_active=True,
+            default_sticky=self.sticky,
+            default_froggy=self.froggy,
+            default_anxiety_inducing=self.anxiety_inducing
+        )
+
+        # Link all intentions with the same title and creator to this pattern
+        Intention.objects.filter(
+            creator=self.creator,
+            title=self.title,
+            recurring_intention__isnull=True
+        ).update(recurring_intention=recurring)
+
+        return recurring, True
+
     @classmethod
     def copy_sticky_intentions_forward(cls, user, from_date, to_date):
         """Copy sticky intentions from from_date to to_date for a user"""

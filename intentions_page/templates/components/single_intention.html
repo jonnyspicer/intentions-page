@@ -13,6 +13,9 @@
             {% if intention.anxiety_inducing %}
                 <span class="anxiety-icon">⚡</span>
             {% endif %}
+            {% if intention.is_recurring %}
+                <span class="recurring-icon">🔁</span>
+            {% endif %}
             {{ intention.title }}
     </label>
 
@@ -56,6 +59,13 @@
                 {% endif %}
                 {{ intention.edit_form.anxiety_inducing }}
             </label>
+            <button type="submit" name="toggle_recurring" value="1" class="recurring_button dropdown-item btn-link">
+                {% if intention.is_recurring %}
+                    🔁 Make non-recurring
+                {% else %}
+                    🔁 Make recurring
+                {% endif %}
+            </button>
             <li class="append_button dropdown-item" data-toggle="modal" data-target="#appendTextModal{{ intention.id }}">Append</li>
         </div>
     </div>
