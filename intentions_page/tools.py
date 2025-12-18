@@ -97,6 +97,148 @@ def create_intention_executor(tool_input, user=None):
     }
 
 
+def create_intentions_batch_executor(tool_input, user=None):
+    """
+    Execute the create_intentions_batch tool to create multiple intentions at once.
+
+    Args:
+        tool_input: Dict with keys: intentions (list of dicts), date (optional)
+        user: Django User object
+
+    Returns:
+        dict with result information
+
+    Raises:
+        ValueError: For validation errors
+    """
+    from intentions_page.models import Intention, get_working_day_date
+    from django.utils.dateparse import parse_date
+    from django.db import transaction
+
+    intentions_list = tool_input.get('intentions', [])
+    if not intentions_list:
+        raise ValueError("intentions list is required and cannot be empty")
+
+    if not isinstance(intentions_list, list):
+        raise ValueError("intentions must be a list")
+
+    if len(intentions_list) > 20:
+        raise ValueError("Cannot create more than 20 intentions at once")
+
+    # Parse common date if provided
+    date_str = tool_input.get('date')
+    if date_str:
+        common_date = parse_date(date_str)
+        if not common_date:
+            raise ValueError(f"Invalid date format: {date_str}. Use YYYY-MM-DD.")
+    else:
+        common_date = None  # Will use working day per intention
+
+    # Validate all intentions before creating any
+    validated_intentions = []
+    frog_count = 0
+
+    for idx, intention_spec in enumerate(intentions_list):
+        if not isinstance(intention_spec, dict):
+            raise ValueError(f"Intention #{idx + 1} must be a dictionary/object")
+
+        # Validate title
+        title = intention_spec.get('title', '').strip()
+        if not title:
+            raise ValueError(f"Intention #{idx + 1}: title is required and cannot be empty")
+        if len(title) > 500:
+            raise ValueError(f"Intention #{idx + 1}: title cannot exceed 500 characters")
+
+        # Parse date for this intention (use common_date if no specific date)
+        intention_date_str = intention_spec.get('date')
+        if intention_date_str:
+            intention_date = parse_date(intention_date_str)
+            if not intention_date:
+                raise ValueError(
+                    f"Intention #{idx + 1}: invalid date format '{intention_date_str}'. Use YYYY-MM-DD."
+                )
+        elif common_date:
+            intention_date = common_date
+        else:
+            intention_date = get_working_day_date()
+
+        # Extract flags
+        froggy = intention_spec.get('froggy', False)
+        sticky = intention_spec.get('sticky', False)
+        anxiety_inducing = intention_spec.get('anxiety_inducing', False)
+
+        # Check frog constraint
+        if froggy:
+            frog_count += 1
+            if frog_count > 1:
+                raise ValueError(
+                    "Cannot create multiple frogs in the same batch. Only one frog per day allowed."
+                )
+
+        validated_intentions.append({
+            'title': title,
+            'date': intention_date,
+            'froggy': froggy,
+            'sticky': sticky,
+            'anxiety_inducing': anxiety_inducing
+        })
+
+    # Create all intentions atomically
+    created_intentions = []
+
+    with transaction.atomic():
+        # If there's a frog in the batch, check for existing frogs
+        if frog_count > 0:
+            frog_intention = next(i for i in validated_intentions if i['froggy'])
+            existing_frog = Intention.objects.select_for_update().filter(
+                creator=user,
+                date=frog_intention['date'],
+                froggy=True
+            ).first()
+
+            if existing_frog:
+                raise ValueError(
+                    f"A frog already exists for {frog_intention['date']}: '{existing_frog.title}'. "
+                    f"Only one frog per day allowed."
+                )
+
+        # Create all intentions
+        for intention_data in validated_intentions:
+            intention = Intention.objects.create(
+                title=intention_data['title'],
+                date=intention_data['date'],
+                creator=user,
+                froggy=intention_data['froggy'],
+                sticky=intention_data['sticky'],
+                anxiety_inducing=intention_data['anxiety_inducing'],
+                completed=False,
+                neverminded=False
+            )
+            created_intentions.append(intention)
+
+    logger.info(
+        f"Batch created {len(created_intentions)} intentions for user {user.id}"
+    )
+
+    # Build result list
+    results = []
+    for intention in created_intentions:
+        results.append({
+            'intention_id': intention.id,
+            'title': intention.title,
+            'date': intention.date.isoformat(),
+            'froggy': intention.froggy,
+            'sticky': intention.sticky,
+            'anxiety_inducing': intention.anxiety_inducing
+        })
+
+    return {
+        'count': len(created_intentions),
+        'intentions': results,
+        'message': f"Successfully created {len(created_intentions)} intention(s)"
+    }
+
+
 def update_intention_status_executor(tool_input, user=None):
     """
     Execute the update_intention_status tool.
@@ -582,6 +724,57 @@ TOOL_REGISTRY = {
             }
         },
         'executor': create_intention_executor,
+        'requires_user': True
+    },
+    'create_intentions_batch': {
+        'schema': {
+            'name': 'create_intentions_batch',
+            'description': 'Create multiple intentions at once (batch operation). Use when user asks to break down a complex task into subtasks, or wants to create several tasks simultaneously. Maximum 20 intentions per batch.',
+            'input_schema': {
+                'type': 'object',
+                'properties': {
+                    'intentions': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'title': {
+                                    'type': 'string',
+                                    'description': 'Title of the intention (max 500 characters)'
+                                },
+                                'date': {
+                                    'type': 'string',
+                                    'description': 'Date in YYYY-MM-DD format (optional, overrides batch-level date)'
+                                },
+                                'froggy': {
+                                    'type': 'boolean',
+                                    'description': 'Mark as frog/most important (optional, only one frog per day allowed)',
+                                    'default': False
+                                },
+                                'sticky': {
+                                    'type': 'boolean',
+                                    'description': 'Should carry forward if incomplete (optional)',
+                                    'default': False
+                                },
+                                'anxiety_inducing': {
+                                    'type': 'boolean',
+                                    'description': 'Causes anxiety/stress (optional)',
+                                    'default': False
+                                }
+                            },
+                            'required': ['title']
+                        },
+                        'description': 'List of intentions to create (max 20). Each must have at least a title.'
+                    },
+                    'date': {
+                        'type': 'string',
+                        'description': 'Default date for all intentions in YYYY-MM-DD format. Individual intentions can override this. ONLY provide if user explicitly requests a specific date, otherwise omit to use today\'s date.'
+                    }
+                },
+                'required': ['intentions']
+            }
+        },
+        'executor': create_intentions_batch_executor,
         'requires_user': True
     },
     'update_intention_status': {
