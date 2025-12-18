@@ -55,11 +55,20 @@ class Intention(models.Model):
         return False
 
     def get_or_create_recurring_pattern(self):
-        """Get or create a daily RecurringIntention pattern for this intention"""
+        """
+        Get or create a daily RecurringIntention pattern for this intention.
+
+        Only links the current intention to the pattern (not past intentions with same title).
+        Flags default to False to avoid conflicts (e.g., multiple frogs per day).
+
+        Returns:
+            Tuple of (RecurringIntention, created: bool)
+        """
         if self.recurring_intention:
             return self.recurring_intention, False
 
         # Create a new daily recurring pattern
+        # Note: Flags default to False to avoid edge cases (e.g., froggy constraint)
         recurring = RecurringIntention.objects.create(
             title=self.title,
             creator=self.creator,
@@ -67,17 +76,14 @@ class Intention(models.Model):
             interval=1,
             start_date=self.date,
             is_active=True,
-            default_sticky=self.sticky,
-            default_froggy=self.froggy,
-            default_anxiety_inducing=self.anxiety_inducing
+            default_sticky=False,
+            default_froggy=False,
+            default_anxiety_inducing=False
         )
 
-        # Link all intentions with the same title and creator to this pattern
-        Intention.objects.filter(
-            creator=self.creator,
-            title=self.title,
-            recurring_intention__isnull=True
-        ).update(recurring_intention=recurring)
+        # Link only this intention to the pattern (not past intentions)
+        self.recurring_intention = recurring
+        self.save(update_fields=['recurring_intention'])
 
         return recurring, True
 

@@ -136,17 +136,22 @@ def edit(request, primary_key):
     if request.method == 'POST':
         # Handle recurring toggle separately
         if 'toggle_recurring' in request.POST:
-            if intention.is_recurring:
+            if intention.recurring_intention and intention.recurring_intention.is_active:
                 # Turn off recurring: deactivate the pattern
-                if intention.recurring_intention:
-                    intention.recurring_intention.is_active = False
-                    intention.recurring_intention.save()
+                intention.recurring_intention.is_active = False
+                intention.recurring_intention.save()
+            elif intention.recurring_intention and not intention.recurring_intention.is_active:
+                # Reactivate an existing inactive pattern
+                intention.recurring_intention.is_active = True
+                intention.recurring_intention.save()
             else:
-                # Turn on recurring: create a daily pattern
+                # Turn on recurring: create a new daily pattern
                 intention.get_or_create_recurring_pattern()
 
             # Refresh the intention to get updated recurring status
             intention.refresh_from_db()
+            # Initialize form for template rendering
+            intention.edit_form = IntentionEditForm(instance=intention)
         else:
             # Handle normal form fields
             intention.edit_form = IntentionEditForm(request.POST, instance=intention)
