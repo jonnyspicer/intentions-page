@@ -8,7 +8,8 @@ from intentions_page.tools import (
     reorder_intentions_executor,
     update_intention_status_executor,
     list_intentions_executor,
-    get_intention_details_executor
+    get_intention_details_executor,
+    update_intention_executor
 )
 
 User = get_user_model()
@@ -907,3 +908,174 @@ class GetIntentionDetailsExecutorTest(TestCase):
         self.assertEqual(result['result']['title'], 'Test task')
         self.assertEqual(len(executor.execution_log), 1)
         self.assertEqual(executor.execution_log[0]['tool_name'], 'get_intention_details')
+
+
+class UpdateIntentionExecutorTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.today = get_working_day_date()
+        self.intention = Intention.objects.create(
+            title='Original title',
+            date=self.today,
+            creator=self.user
+        )
+
+    def test_update_title_only(self):
+        tool_input = {
+            'intention_id': self.intention.id,
+            'title': 'New title'
+        }
+        result = update_intention_executor(tool_input, user=self.user)
+        
+        self.assertEqual(result['title'], 'New title')
+        self.assertEqual(len(result['changes']), 1)
+        self.assertIn('Original title', result['changes'][0])
+        self.assertIn('New title', result['changes'][0])
+        
+        self.intention.refresh_from_db()
+        self.assertEqual(self.intention.title, 'New title')
+
+    def test_update_date_only(self):
+        tomorrow = self.today + timedelta(days=1)
+        tool_input = {
+            'intention_id': self.intention.id,
+            'date': tomorrow.isoformat()
+        }
+        result = update_intention_executor(tool_input, user=self.user)
+        
+        self.assertEqual(result['date'], tomorrow.isoformat())
+        self.assertEqual(len(result['changes']), 1)
+        
+        self.intention.refresh_from_db()
+        self.assertEqual(self.intention.date, tomorrow)
+
+    def test_update_both_title_and_date(self):
+        tomorrow = self.today + timedelta(days=1)
+        tool_input = {
+            'intention_id': self.intention.id,
+            'title': 'New title',
+            'date': tomorrow.isoformat()
+        }
+        result = update_intention_executor(tool_input, user=self.user)
+        
+        self.assertEqual(len(result['changes']), 2)
+        self.intention.refresh_from_db()
+        self.assertEqual(self.intention.title, 'New title')
+        self.assertEqual(self.intention.date, tomorrow)
+
+    def test_no_changes_made(self):
+        tool_input = {
+            'intention_id': self.intention.id,
+            'title': 'Original title',
+            'date': self.today.isoformat()
+        }
+        result = update_intention_executor(tool_input, user=self.user)
+        
+        self.assertEqual(len(result['changes']), 0)
+        self.assertIn('No changes made', result['message'])
+
+    def test_missing_intention_id(self):
+        tool_input = {'title': 'New title'}
+        
+        with self.assertRaisesMessage(ValueError, 'intention_id is required'):
+            update_intention_executor(tool_input, user=self.user)
+
+    def test_invalid_intention_id_type(self):
+        tool_input = {'intention_id': 'not-an-int', 'title': 'New'}
+        
+        with self.assertRaisesMessage(ValueError, 'must be an integer'):
+            update_intention_executor(tool_input, user=self.user)
+
+    def test_nonexistent_intention(self):
+        tool_input = {'intention_id': 99999, 'title': 'New'}
+        
+        with self.assertRaisesMessage(ValueError, 'not found'):
+            update_intention_executor(tool_input, user=self.user)
+
+    def test_other_user_intention(self):
+        other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='testpass123'
+        )
+        other_intention = Intention.objects.create(
+            title='Other task',
+            date=self.today,
+            creator=other_user
+        )
+        
+        tool_input = {'intention_id': other_intention.id, 'title': 'Hacked'}
+        
+        with self.assertRaisesMessage(ValueError, 'not found'):
+            update_intention_executor(tool_input, user=self.user)
+
+    def test_empty_title(self):
+        tool_input = {'intention_id': self.intention.id, 'title': '   '}
+        
+        with self.assertRaisesMessage(ValueError, 'cannot be empty'):
+            update_intention_executor(tool_input, user=self.user)
+
+    def test_title_too_long(self):
+        tool_input = {'intention_id': self.intention.id, 'title': 'x' * 501}
+        
+        with self.assertRaisesMessage(ValueError, 'cannot exceed 500 characters'):
+            update_intention_executor(tool_input, user=self.user)
+
+    def test_invalid_date_format(self):
+        tool_input = {'intention_id': self.intention.id, 'date': 'not-a-date'}
+        
+        with self.assertRaisesMessage(ValueError, 'Invalid date format'):
+            update_intention_executor(tool_input, user=self.user)
+
+    def test_cannot_move_frog_to_date_with_existing_frog(self):
+        # Make the test intention a frog
+        self.intention.froggy = True
+        self.intention.save()
+        
+        # Create another frog on tomorrow
+        tomorrow = self.today + timedelta(days=1)
+        existing_frog = Intention.objects.create(
+            title='Tomorrow frog',
+            date=tomorrow,
+            creator=self.user,
+            froggy=True
+        )
+        
+        # Try to move today's frog to tomorrow (should fail)
+        tool_input = {
+            'intention_id': self.intention.id,
+            'date': tomorrow.isoformat()
+        }
+        
+        with self.assertRaisesMessage(ValueError, 'A frog already exists'):
+            update_intention_executor(tool_input, user=self.user)
+        
+        # Verify the frog wasn't moved
+        self.intention.refresh_from_db()
+        self.assertEqual(self.intention.date, self.today)
+
+    def test_can_move_non_frog_to_date_with_existing_frog(self):
+        # Create a frog on tomorrow
+        tomorrow = self.today + timedelta(days=1)
+        frog = Intention.objects.create(
+            title='Tomorrow frog',
+            date=tomorrow,
+            creator=self.user,
+            froggy=True
+        )
+        
+        # Move a non-frog intention to tomorrow (should succeed)
+        tool_input = {
+            'intention_id': self.intention.id,
+            'date': tomorrow.isoformat()
+        }
+        result = update_intention_executor(tool_input, user=self.user)
+        
+        # Should succeed since we're not moving a frog
+        self.assertEqual(result['date'], tomorrow.isoformat())
+        self.intention.refresh_from_db()
+        self.assertEqual(self.intention.date, tomorrow)

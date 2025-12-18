@@ -396,6 +396,107 @@ def get_intention_details_executor(tool_input, user=None):
     }
 
 
+def update_intention_executor(tool_input, user=None):
+    """
+    Execute the update_intention tool.
+
+    Args:
+        tool_input: Dict with keys: intention_id (int), title (optional), date (optional)
+        user: Django User object
+
+    Returns:
+        dict with result information
+
+    Raises:
+        ValueError: For validation errors
+    """
+    from intentions_page.models import Intention
+    from django.utils.dateparse import parse_date
+
+    intention_id = tool_input.get('intention_id')
+    if not intention_id:
+        raise ValueError("intention_id is required")
+
+    if not isinstance(intention_id, int):
+        raise ValueError("intention_id must be an integer")
+
+    # Get the intention and verify ownership
+    try:
+        intention = Intention.objects.get(id=intention_id, creator=user)
+    except Intention.DoesNotExist:
+        raise ValueError(
+            f"Intention with ID {intention_id} not found or doesn't belong to you"
+        )
+
+    # Track what changed
+    changes = []
+
+    # Update title if provided
+    new_title = tool_input.get('title')
+    if new_title is not None:
+        new_title = new_title.strip()
+        if not new_title:
+            raise ValueError("Title cannot be empty")
+        if len(new_title) > 500:
+            raise ValueError("Title cannot exceed 500 characters")
+
+        if new_title != intention.title:
+            old_title = intention.title
+            intention.title = new_title
+            changes.append(f"title: '{old_title}' → '{new_title}'")
+
+    # Update date if provided
+    new_date_str = tool_input.get('date')
+    if new_date_str is not None:
+        new_date = parse_date(new_date_str)
+        if not new_date:
+            raise ValueError(f"Invalid date format: {new_date_str}. Use YYYY-MM-DD.")
+
+        if new_date != intention.date:
+            # Check if moving a frog to a date that already has one
+            if intention.froggy:
+                existing_frog = Intention.objects.filter(
+                    creator=user,
+                    date=new_date,
+                    froggy=True
+                ).exclude(id=intention.id).first()
+
+                if existing_frog:
+                    raise ValueError(
+                        f"A frog already exists for {new_date}: '{existing_frog.title}'. "
+                        f"Cannot move this frog there. Remove the existing frog first."
+                    )
+
+            old_date = intention.date
+            intention.date = new_date
+            changes.append(f"date: {old_date.isoformat()} → {new_date.isoformat()}")
+
+    # Check if any changes were made
+    if not changes:
+        return {
+            'intention_id': intention.id,
+            'title': intention.title,
+            'date': intention.date.isoformat(),
+            'changes': [],
+            'message': "No changes made - intention already has the specified values"
+        }
+
+    # Save the changes
+    intention.save()
+
+    logger.info(
+        f"Updated intention #{intention.id} for user {user.id}: {', '.join(changes)}"
+    )
+
+    return {
+        'intention_id': intention.id,
+        'title': intention.title,
+        'date': intention.date.isoformat(),
+        'changes': changes,
+        'message': f"Successfully updated intention: {', '.join(changes)}"
+    }
+
+
 TOOL_REGISTRY = {
     'create_intention': {
         'schema': {
@@ -525,6 +626,32 @@ TOOL_REGISTRY = {
             }
         },
         'executor': get_intention_details_executor,
+        'requires_user': True
+    },
+    'update_intention': {
+        'schema': {
+            'name': 'update_intention',
+            'description': 'Update an intention\'s title and/or date. Use when user wants to modify, rename, change, or reschedule an existing task. At least one of title or date must be provided.',
+            'input_schema': {
+                'type': 'object',
+                'properties': {
+                    'intention_id': {
+                        'type': 'integer',
+                        'description': 'ID of the intention to update (shown in parentheses like "ID: 123")'
+                    },
+                    'title': {
+                        'type': 'string',
+                        'description': 'New title for the intention (optional, max 500 characters)'
+                    },
+                    'date': {
+                        'type': 'string',
+                        'description': 'New date in YYYY-MM-DD format (optional)'
+                    }
+                },
+                'required': ['intention_id']
+            }
+        },
+        'executor': update_intention_executor,
         'requires_user': True
     }
 }
