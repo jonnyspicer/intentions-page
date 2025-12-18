@@ -5,6 +5,7 @@ from intentions_page.models import Intention, get_working_day_date
 from intentions_page.tools import (
     ToolExecutor,
     create_intention_executor,
+    create_intentions_batch_executor,
     reorder_intentions_executor,
     update_intention_status_executor,
     list_intentions_executor,
@@ -1404,3 +1405,295 @@ class AgentActionLoggingTest(TestCase):
 
         self.assertIn('✗', failed_str)  # Failure symbol
         self.assertIn('create_intention', failed_str)
+
+
+class CreateIntentionsBatchExecutorTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='otherpass123'
+        )
+        self.today = get_working_day_date()
+        self.tomorrow = self.today + timedelta(days=1)
+
+    def test_batch_create_multiple_intentions_successfully(self):
+        tool_input = {
+            'intentions': [
+                {'title': 'Task 1'},
+                {'title': 'Task 2'},
+                {'title': 'Task 3'}
+            ]
+        }
+
+        result = create_intentions_batch_executor(tool_input, user=self.user)
+
+        # Verify result structure
+        self.assertEqual(result['count'], 3)
+        self.assertEqual(len(result['intentions']), 3)
+        self.assertIn('Successfully created 3', result['message'])
+
+        # Verify all intentions were created
+        self.assertEqual(Intention.objects.filter(creator=self.user).count(), 3)
+
+        # Verify individual intentions
+        titles = [i['title'] for i in result['intentions']]
+        self.assertIn('Task 1', titles)
+        self.assertIn('Task 2', titles)
+        self.assertIn('Task 3', titles)
+
+        # Verify all have default date
+        for intention_data in result['intentions']:
+            self.assertEqual(intention_data['date'], self.today.isoformat())
+
+    def test_batch_create_with_common_date(self):
+        tool_input = {
+            'intentions': [
+                {'title': 'Future task 1'},
+                {'title': 'Future task 2'}
+            ],
+            'date': self.tomorrow.isoformat()
+        }
+
+        result = create_intentions_batch_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['count'], 2)
+        for intention_data in result['intentions']:
+            self.assertEqual(intention_data['date'], self.tomorrow.isoformat())
+
+    def test_batch_create_with_mixed_dates(self):
+        tool_input = {
+            'intentions': [
+                {'title': 'Today task'},
+                {'title': 'Tomorrow task', 'date': self.tomorrow.isoformat()}
+            ],
+            'date': self.today.isoformat()  # Common date
+        }
+
+        result = create_intentions_batch_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['count'], 2)
+        # First uses common date
+        self.assertEqual(result['intentions'][0]['date'], self.today.isoformat())
+        # Second overrides with specific date
+        self.assertEqual(result['intentions'][1]['date'], self.tomorrow.isoformat())
+
+    def test_batch_create_with_flags(self):
+        tool_input = {
+            'intentions': [
+                {'title': 'Normal task'},
+                {'title': 'Sticky task', 'sticky': True},
+                {'title': 'Anxiety task', 'anxiety_inducing': True}
+            ]
+        }
+
+        result = create_intentions_batch_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['count'], 3)
+        self.assertFalse(result['intentions'][0]['sticky'])
+        self.assertTrue(result['intentions'][1]['sticky'])
+        self.assertTrue(result['intentions'][2]['anxiety_inducing'])
+
+    def test_batch_create_with_one_frog(self):
+        tool_input = {
+            'intentions': [
+                {'title': 'Normal task'},
+                {'title': 'Frog task', 'froggy': True},
+                {'title': 'Another task'}
+            ]
+        }
+
+        result = create_intentions_batch_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['count'], 3)
+        self.assertFalse(result['intentions'][0]['froggy'])
+        self.assertTrue(result['intentions'][1]['froggy'])
+        self.assertFalse(result['intentions'][2]['froggy'])
+
+    def test_batch_create_fails_with_multiple_frogs(self):
+        tool_input = {
+            'intentions': [
+                {'title': 'Frog 1', 'froggy': True},
+                {'title': 'Frog 2', 'froggy': True}
+            ]
+        }
+
+        with self.assertRaisesMessage(ValueError, 'Cannot create multiple frogs'):
+            create_intentions_batch_executor(tool_input, user=self.user)
+
+        # Verify no intentions were created (atomic rollback)
+        self.assertEqual(Intention.objects.filter(creator=self.user).count(), 0)
+
+    def test_batch_create_fails_with_existing_frog(self):
+        # Create an existing frog
+        Intention.objects.create(
+            title='Existing frog',
+            date=self.today,
+            creator=self.user,
+            froggy=True
+        )
+
+        tool_input = {
+            'intentions': [
+                {'title': 'Normal task'},
+                {'title': 'New frog', 'froggy': True}
+            ]
+        }
+
+        with self.assertRaisesMessage(ValueError, 'A frog already exists'):
+            create_intentions_batch_executor(tool_input, user=self.user)
+
+        # Verify only the original frog exists (batch was rolled back)
+        self.assertEqual(Intention.objects.filter(creator=self.user).count(), 1)
+
+    def test_batch_create_empty_list_fails(self):
+        tool_input = {
+            'intentions': []
+        }
+
+        with self.assertRaisesMessage(ValueError, 'intentions list is required and cannot be empty'):
+            create_intentions_batch_executor(tool_input, user=self.user)
+
+    def test_batch_create_missing_intentions_field_fails(self):
+        tool_input = {}
+
+        with self.assertRaisesMessage(ValueError, 'intentions list is required and cannot be empty'):
+            create_intentions_batch_executor(tool_input, user=self.user)
+
+    def test_batch_create_too_many_intentions_fails(self):
+        tool_input = {
+            'intentions': [{'title': f'Task {i}'} for i in range(21)]
+        }
+
+        with self.assertRaisesMessage(ValueError, 'Cannot create more than 20 intentions at once'):
+            create_intentions_batch_executor(tool_input, user=self.user)
+
+    def test_batch_create_invalid_intention_type_fails(self):
+        tool_input = {
+            'intentions': [
+                {'title': 'Valid task'},
+                'invalid string',  # Should be a dict
+                {'title': 'Another task'}
+            ]
+        }
+
+        with self.assertRaisesMessage(ValueError, 'Intention #2 must be a dictionary'):
+            create_intentions_batch_executor(tool_input, user=self.user)
+
+        # Verify atomic rollback - no intentions created
+        self.assertEqual(Intention.objects.filter(creator=self.user).count(), 0)
+
+    def test_batch_create_empty_title_fails(self):
+        tool_input = {
+            'intentions': [
+                {'title': 'Valid task'},
+                {'title': '   '},  # Empty after strip
+                {'title': 'Another task'}
+            ]
+        }
+
+        with self.assertRaisesMessage(ValueError, 'Intention #2: title is required and cannot be empty'):
+            create_intentions_batch_executor(tool_input, user=self.user)
+
+        # Verify atomic rollback
+        self.assertEqual(Intention.objects.filter(creator=self.user).count(), 0)
+
+    def test_batch_create_title_too_long_fails(self):
+        long_title = 'x' * 501
+        tool_input = {
+            'intentions': [
+                {'title': 'Valid task'},
+                {'title': long_title}
+            ]
+        }
+
+        with self.assertRaisesMessage(ValueError, 'Intention #2: title cannot exceed 500 characters'):
+            create_intentions_batch_executor(tool_input, user=self.user)
+
+        # Verify atomic rollback
+        self.assertEqual(Intention.objects.filter(creator=self.user).count(), 0)
+
+    def test_batch_create_invalid_date_format_fails(self):
+        tool_input = {
+            'intentions': [
+                {'title': 'Valid task'},
+                {'title': 'Invalid date task', 'date': 'not-a-date'}
+            ]
+        }
+
+        with self.assertRaisesMessage(ValueError, 'Intention #2: invalid date format'):
+            create_intentions_batch_executor(tool_input, user=self.user)
+
+        # Verify atomic rollback
+        self.assertEqual(Intention.objects.filter(creator=self.user).count(), 0)
+
+    def test_batch_create_invalid_common_date_fails(self):
+        tool_input = {
+            'intentions': [
+                {'title': 'Task 1'},
+                {'title': 'Task 2'}
+            ],
+            'date': 'invalid-date'
+        }
+
+        with self.assertRaisesMessage(ValueError, 'Invalid date format: invalid-date'):
+            create_intentions_batch_executor(tool_input, user=self.user)
+
+    def test_batch_create_atomic_transaction(self):
+        # Create existing frog that will cause conflict
+        Intention.objects.create(
+            title='Existing frog',
+            date=self.today,
+            creator=self.user,
+            froggy=True
+        )
+
+        tool_input = {
+            'intentions': [
+                {'title': 'Task 1'},
+                {'title': 'Task 2'},
+                {'title': 'Conflicting frog', 'froggy': True}  # Will fail
+            ]
+        }
+
+        with self.assertRaisesMessage(ValueError, 'A frog already exists'):
+            create_intentions_batch_executor(tool_input, user=self.user)
+
+        # Verify ONLY the original frog exists (all batch intentions rolled back)
+        all_intentions = Intention.objects.filter(creator=self.user)
+        self.assertEqual(all_intentions.count(), 1)
+        self.assertEqual(all_intentions.first().title, 'Existing frog')
+
+    def test_batch_create_user_isolation(self):
+        # Create intentions for other user
+        Intention.objects.create(
+            title='Other user task',
+            date=self.today,
+            creator=self.other_user
+        )
+
+        tool_input = {
+            'intentions': [
+                {'title': 'My task 1'},
+                {'title': 'My task 2'}
+            ]
+        }
+
+        result = create_intentions_batch_executor(tool_input, user=self.user)
+
+        # Verify correct user's intentions
+        my_intentions = Intention.objects.filter(creator=self.user)
+        other_intentions = Intention.objects.filter(creator=self.other_user)
+
+        self.assertEqual(my_intentions.count(), 2)
+        self.assertEqual(other_intentions.count(), 1)
+
+        # Verify all created intentions belong to correct user
+        for intention_data in result['intentions']:
+            intention = Intention.objects.get(id=intention_data['intention_id'])
+            self.assertEqual(intention.creator, self.user)

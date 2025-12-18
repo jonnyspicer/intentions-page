@@ -218,17 +218,19 @@ Help them prioritize tasks, break down complex intentions, suggest time manageme
             base_message += """
 
 You have access to these tools:
-1. 'create_intention' - Create a new intention/task
-2. 'update_intention_status' - Update status of an intention (mark completed, sticky, froggy, anxiety-inducing, neverminded)
-3. 'update_intention' - Update an intention's title and/or date
-4. 'delete_intention' - Delete an intention permanently
-5. 'reorder_intentions' - Reorder intentions by priority
-6. 'list_intentions' - List all intentions for a date with optional status filtering
-7. 'get_intention_details' - Get detailed information about a specific intention by ID
+1. 'create_intention' - Create a single new intention/task
+2. 'create_intentions_batch' - Create multiple intentions at once (use when breaking down complex tasks)
+3. 'update_intention_status' - Update status of an intention (mark completed, sticky, froggy, anxiety-inducing, neverminded)
+4. 'update_intention' - Update an intention's title and/or date
+5. 'delete_intention' - Delete an intention permanently
+6. 'reorder_intentions' - Reorder intentions by priority
+7. 'list_intentions' - List all intentions for a date with optional status filtering
+8. 'get_intention_details' - Get detailed information about a specific intention by ID
 
 Guidelines:
 - Only use tools when explicitly or implicitly requested
 - For general questions, respond normally without tools
+- When user asks to break down a complex task into subtasks, use 'create_intentions_batch' for efficiency
 - When creating a "frog" (most important task), remember only one per day is allowed
 - When updating, use the intention IDs shown in parentheses (e.g., "ID: 123")
 - Use 'update_intention' to change title or date, 'update_intention_status' for status flags
