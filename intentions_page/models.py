@@ -236,8 +236,16 @@ class RecurringIntention(models.Model):
 
             weekday = target_date.weekday()  # 0=Monday, 6=Sunday
             if weekday in self.days_of_week:
-                # Also check interval (every N weeks from start_date)
-                weeks_diff = (target_date - self.start_date).days // 7
+                # Calculate weeks from the first occurrence of this weekday on or after start_date
+                days_until_weekday = (weekday - self.start_date.weekday()) % 7
+                first_occurrence = self.start_date + timezone.timedelta(days=days_until_weekday)
+
+                # Check if target_date is before the first occurrence
+                if target_date < first_occurrence:
+                    return False, f"Date is before first occurrence ({first_occurrence})"
+
+                # Check interval (every N weeks from first occurrence)
+                weeks_diff = (target_date - first_occurrence).days // 7
                 if weeks_diff % self.interval == 0:
                     return True, f"Weekly pattern matches (weekday {weekday})"
             return False, f"Weekly pattern doesn't match"
@@ -294,18 +302,6 @@ class RecurringIntention(models.Model):
             logger.debug(f"Not generating for {target_date}: {reason}")
             return None
 
-        # Check for duplicate: same title, date, creator, recurring_intention
-        existing = Intention.objects.filter(
-            creator=self.creator,
-            date=target_date,
-            title=self.title,
-            recurring_intention=self
-        ).exists()
-
-        if existing:
-            logger.debug(f"Intention already exists for {target_date}: {self.title}")
-            return None
-
         # Handle froggy constraint: can't create frog if one exists for this date
         if self.default_froggy:
             existing_frog = Intention.objects.filter(
@@ -321,18 +317,24 @@ class RecurringIntention(models.Model):
                 )
                 return None
 
-        # Create the intention
-        intention = Intention.objects.create(
-            title=self.title,
-            date=target_date,
+        # Use get_or_create to prevent race conditions
+        intention, created = Intention.objects.get_or_create(
             creator=self.creator,
-            sticky=self.default_sticky,
-            froggy=self.default_froggy,
-            anxiety_inducing=self.default_anxiety_inducing,
+            date=target_date,
+            title=self.title,
             recurring_intention=self,
-            completed=False,
-            neverminded=False
+            defaults={
+                'sticky': self.default_sticky,
+                'froggy': self.default_froggy,
+                'anxiety_inducing': self.default_anxiety_inducing,
+                'completed': False,
+                'neverminded': False
+            }
         )
+
+        if not created:
+            logger.debug(f"Intention already exists for {target_date}: {self.title}")
+            return None
 
         # Update last_generated_date
         self.last_generated_date = target_date
