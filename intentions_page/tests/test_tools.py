@@ -2,7 +2,14 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from datetime import date, timedelta
 from intentions_page.models import Intention, get_working_day_date
-from intentions_page.tools import ToolExecutor, create_intention_executor, reorder_intentions_executor, update_intention_status_executor
+from intentions_page.tools import (
+    ToolExecutor,
+    create_intention_executor,
+    reorder_intentions_executor,
+    update_intention_status_executor,
+    list_intentions_executor,
+    get_intention_details_executor
+)
 
 User = get_user_model()
 
@@ -643,3 +650,260 @@ class ReorderIntentionsExecutorTest(TestCase):
         self.assertTrue(result['success'])
         self.assertEqual(len(executor.execution_log), 1)
         self.assertEqual(executor.execution_log[0]['tool_name'], 'reorder_intentions')
+
+
+class ListIntentionsExecutorTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.today = get_working_day_date()
+
+        # Create test intentions with different statuses
+        self.intention1 = Intention.objects.create(
+            title='Active task',
+            date=self.today,
+            creator=self.user,
+            completed=False,
+            neverminded=False
+        )
+        self.intention2 = Intention.objects.create(
+            title='Completed task',
+            date=self.today,
+            creator=self.user,
+            completed=True
+        )
+        self.intention3 = Intention.objects.create(
+            title='Neverminded task',
+            date=self.today,
+            creator=self.user,
+            neverminded=True
+        )
+        self.intention4 = Intention.objects.create(
+            title='Frog task',
+            date=self.today,
+            creator=self.user,
+            froggy=True,
+            sticky=True
+        )
+
+    def test_list_all_intentions_default_date(self):
+        tool_input = {}
+        result = list_intentions_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['date'], self.today.isoformat())
+        self.assertEqual(result['status_filter'], 'all')
+        self.assertEqual(result['count'], 4)
+        self.assertEqual(len(result['intentions']), 4)
+
+        # Check structure of returned intentions
+        first_intention = result['intentions'][0]
+        self.assertIn('id', first_intention)
+        self.assertIn('title', first_intention)
+        self.assertIn('date', first_intention)
+        self.assertIn('completed', first_intention)
+        self.assertIn('status', first_intention)
+
+    def test_list_active_intentions(self):
+        tool_input = {'status_filter': 'active'}
+        result = list_intentions_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['status_filter'], 'active')
+        self.assertEqual(result['count'], 2)  # intention1 and intention4
+
+        titles = [i['title'] for i in result['intentions']]
+        self.assertIn('Active task', titles)
+        self.assertIn('Frog task', titles)
+        self.assertNotIn('Completed task', titles)
+        self.assertNotIn('Neverminded task', titles)
+
+    def test_list_completed_intentions(self):
+        tool_input = {'status_filter': 'completed'}
+        result = list_intentions_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['status_filter'], 'completed')
+        self.assertEqual(result['count'], 1)
+        self.assertEqual(result['intentions'][0]['title'], 'Completed task')
+
+    def test_list_neverminded_intentions(self):
+        tool_input = {'status_filter': 'neverminded'}
+        result = list_intentions_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['status_filter'], 'neverminded')
+        self.assertEqual(result['count'], 1)
+        self.assertEqual(result['intentions'][0]['title'], 'Neverminded task')
+
+    def test_list_specific_date(self):
+        tomorrow = self.today + timedelta(days=1)
+
+        # Create intention for tomorrow
+        Intention.objects.create(
+            title='Tomorrow task',
+            date=tomorrow,
+            creator=self.user
+        )
+
+        tool_input = {'date': tomorrow.isoformat()}
+        result = list_intentions_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['date'], tomorrow.isoformat())
+        self.assertEqual(result['count'], 1)
+        self.assertEqual(result['intentions'][0]['title'], 'Tomorrow task')
+
+    def test_list_empty_date(self):
+        tomorrow = self.today + timedelta(days=1)
+        tool_input = {'date': tomorrow.isoformat()}
+        result = list_intentions_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['count'], 0)
+        self.assertEqual(len(result['intentions']), 0)
+
+    def test_invalid_status_filter(self):
+        tool_input = {'status_filter': 'invalid'}
+
+        with self.assertRaisesMessage(ValueError, 'Invalid status_filter'):
+            list_intentions_executor(tool_input, user=self.user)
+
+    def test_invalid_date_format(self):
+        tool_input = {'date': 'not-a-date'}
+
+        with self.assertRaisesMessage(ValueError, 'Invalid date format'):
+            list_intentions_executor(tool_input, user=self.user)
+
+    def test_user_isolation(self):
+        other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='testpass123'
+        )
+
+        # Create intention for other user
+        Intention.objects.create(
+            title='Other user task',
+            date=self.today,
+            creator=other_user
+        )
+
+        tool_input = {}
+        result = list_intentions_executor(tool_input, user=self.user)
+
+        # Should only see own intentions
+        self.assertEqual(result['count'], 4)
+        titles = [i['title'] for i in result['intentions']]
+        self.assertNotIn('Other user task', titles)
+
+    def test_tool_executor_integration(self):
+        executor = ToolExecutor(user=self.user)
+
+        result = executor.execute('list_intentions', {
+            'status_filter': 'active'
+        })
+
+        self.assertTrue(result['success'])
+        self.assertEqual(len(executor.execution_log), 1)
+        self.assertEqual(executor.execution_log[0]['tool_name'], 'list_intentions')
+
+
+class GetIntentionDetailsExecutorTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.today = get_working_day_date()
+
+        self.intention = Intention.objects.create(
+            title='Test task',
+            date=self.today,
+            creator=self.user,
+            completed=False,
+            sticky=True,
+            froggy=True,
+            anxiety_inducing=True
+        )
+
+    def test_get_intention_details_success(self):
+        tool_input = {'intention_id': self.intention.id}
+        result = get_intention_details_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['id'], self.intention.id)
+        self.assertEqual(result['title'], 'Test task')
+        self.assertEqual(result['date'], self.today.isoformat())
+        self.assertTrue(result['sticky'])
+        self.assertTrue(result['froggy'])
+        self.assertTrue(result['anxiety_inducing'])
+        self.assertFalse(result['completed'])
+        self.assertEqual(result['status'], 'active')
+        self.assertIn('created_datetime', result)
+        self.assertIn('order', result)
+
+    def test_missing_intention_id(self):
+        tool_input = {}
+
+        with self.assertRaisesMessage(ValueError, 'intention_id is required'):
+            get_intention_details_executor(tool_input, user=self.user)
+
+    def test_invalid_intention_id_type(self):
+        tool_input = {'intention_id': 'not-an-int'}
+
+        with self.assertRaisesMessage(ValueError, 'intention_id must be an integer'):
+            get_intention_details_executor(tool_input, user=self.user)
+
+    def test_nonexistent_intention(self):
+        tool_input = {'intention_id': 99999}
+
+        with self.assertRaisesMessage(ValueError, 'not found or doesn\'t belong to you'):
+            get_intention_details_executor(tool_input, user=self.user)
+
+    def test_other_user_intention(self):
+        other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='testpass123'
+        )
+
+        other_intention = Intention.objects.create(
+            title='Other user task',
+            date=self.today,
+            creator=other_user
+        )
+
+        tool_input = {'intention_id': other_intention.id}
+
+        with self.assertRaisesMessage(ValueError, 'not found or doesn\'t belong to you'):
+            get_intention_details_executor(tool_input, user=self.user)
+
+    def test_completed_intention_status(self):
+        self.intention.completed = True
+        self.intention.save()
+
+        tool_input = {'intention_id': self.intention.id}
+        result = get_intention_details_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['status'], 'completed')
+        self.assertTrue(result['completed'])
+
+    def test_neverminded_intention_status(self):
+        self.intention.neverminded = True
+        self.intention.save()
+
+        tool_input = {'intention_id': self.intention.id}
+        result = get_intention_details_executor(tool_input, user=self.user)
+
+        self.assertEqual(result['status'], 'neverminded')
+        self.assertTrue(result['neverminded'])
+
+    def test_tool_executor_integration(self):
+        executor = ToolExecutor(user=self.user)
+
+        result = executor.execute('get_intention_details', {
+            'intention_id': self.intention.id
+        })
+
+        self.assertTrue(result['success'])
+        self.assertEqual(result['result']['title'], 'Test task')
+        self.assertEqual(len(executor.execution_log), 1)
+        self.assertEqual(executor.execution_log[0]['tool_name'], 'get_intention_details')

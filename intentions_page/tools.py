@@ -268,6 +268,134 @@ def reorder_intentions_executor(tool_input, user=None):
     }
 
 
+def list_intentions_executor(tool_input, user=None):
+    """
+    Execute the list_intentions tool.
+
+    Args:
+        tool_input: Dict with keys: date (optional), status_filter (optional)
+        user: Django User object
+
+    Returns:
+        dict with result information
+
+    Raises:
+        ValueError: For validation errors
+    """
+    from intentions_page.models import Intention, get_working_day_date
+    from django.utils.dateparse import parse_date
+
+    date_str = tool_input.get('date')
+    if date_str:
+        target_date = parse_date(date_str)
+        if not target_date:
+            raise ValueError(f"Invalid date format: {date_str}. Use YYYY-MM-DD.")
+    else:
+        target_date = get_working_day_date()
+
+    status_filter = tool_input.get('status_filter')
+    valid_status_filters = ['active', 'completed', 'neverminded', 'all']
+
+    if status_filter and status_filter not in valid_status_filters:
+        raise ValueError(
+            f"Invalid status_filter '{status_filter}'. "
+            f"Must be one of: {', '.join(valid_status_filters)}"
+        )
+
+    # Query intentions for the user and date
+    intentions = Intention.objects.filter(
+        creator=user,
+        date=target_date
+    ).order_by('order', 'created_datetime')
+
+    # Apply status filter
+    if status_filter == 'active':
+        intentions = intentions.filter(completed=False, neverminded=False)
+    elif status_filter == 'completed':
+        intentions = intentions.filter(completed=True)
+    elif status_filter == 'neverminded':
+        intentions = intentions.filter(neverminded=True)
+    # 'all' or None = no filtering
+
+    # Build result list
+    intention_list = []
+    for intention in intentions:
+        intention_list.append({
+            'id': intention.id,
+            'title': intention.title,
+            'date': intention.date.isoformat(),
+            'order': intention.order,
+            'completed': intention.completed,
+            'neverminded': intention.neverminded,
+            'sticky': intention.sticky,
+            'froggy': intention.froggy,
+            'anxiety_inducing': intention.anxiety_inducing,
+            'status': intention.get_status()
+        })
+
+    logger.info(
+        f"Listed {len(intention_list)} intentions for user {user.id} on {target_date} "
+        f"with filter: {status_filter or 'all'}"
+    )
+
+    return {
+        'date': target_date.isoformat(),
+        'status_filter': status_filter or 'all',
+        'count': len(intention_list),
+        'intentions': intention_list,
+        'message': f"Found {len(intention_list)} intention(s) for {target_date}"
+    }
+
+
+def get_intention_details_executor(tool_input, user=None):
+    """
+    Execute the get_intention_details tool.
+
+    Args:
+        tool_input: Dict with keys: intention_id (int)
+        user: Django User object
+
+    Returns:
+        dict with result information
+
+    Raises:
+        ValueError: For validation errors
+    """
+    from intentions_page.models import Intention
+
+    intention_id = tool_input.get('intention_id')
+    if not intention_id:
+        raise ValueError("intention_id is required")
+
+    if not isinstance(intention_id, int):
+        raise ValueError("intention_id must be an integer")
+
+    # Get the intention and verify ownership
+    try:
+        intention = Intention.objects.get(id=intention_id, creator=user)
+    except Intention.DoesNotExist:
+        raise ValueError(
+            f"Intention with ID {intention_id} not found or doesn't belong to you"
+        )
+
+    logger.info(f"Retrieved intention #{intention.id} for user {user.id}")
+
+    return {
+        'id': intention.id,
+        'title': intention.title,
+        'date': intention.date.isoformat(),
+        'created_datetime': intention.created_datetime.isoformat(),
+        'order': intention.order,
+        'completed': intention.completed,
+        'neverminded': intention.neverminded,
+        'sticky': intention.sticky,
+        'froggy': intention.froggy,
+        'anxiety_inducing': intention.anxiety_inducing,
+        'status': intention.get_status(),
+        'message': f"Retrieved details for intention: {intention.title}"
+    }
+
+
 TOOL_REGISTRY = {
     'create_intention': {
         'schema': {
@@ -356,6 +484,47 @@ TOOL_REGISTRY = {
             }
         },
         'executor': reorder_intentions_executor,
+        'requires_user': True
+    },
+    'list_intentions': {
+        'schema': {
+            'name': 'list_intentions',
+            'description': 'List all intentions for a specific date with optional status filtering. Use when user asks to see their tasks, view intentions, or check what they have planned. Returns full details for each intention.',
+            'input_schema': {
+                'type': 'object',
+                'properties': {
+                    'date': {
+                        'type': 'string',
+                        'description': 'Date in YYYY-MM-DD format. ONLY provide this if the user explicitly requests a specific date. Otherwise, omit this parameter to use today\'s date.'
+                    },
+                    'status_filter': {
+                        'type': 'string',
+                        'description': 'Filter by status: "active" (not completed/neverminded), "completed", "neverminded", or "all"',
+                        'enum': ['active', 'completed', 'neverminded', 'all']
+                    }
+                },
+                'required': []
+            }
+        },
+        'executor': list_intentions_executor,
+        'requires_user': True
+    },
+    'get_intention_details': {
+        'schema': {
+            'name': 'get_intention_details',
+            'description': 'Get detailed information about a specific intention by ID. Use when user asks for details about a specific task or when you need to verify intention properties before updating.',
+            'input_schema': {
+                'type': 'object',
+                'properties': {
+                    'intention_id': {
+                        'type': 'integer',
+                        'description': 'ID of the intention to retrieve (shown in parentheses like "ID: 123")'
+                    }
+                },
+                'required': ['intention_id']
+            }
+        },
+        'executor': get_intention_details_executor,
         'requires_user': True
     }
 }
