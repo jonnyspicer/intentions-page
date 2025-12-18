@@ -9,7 +9,8 @@ from intentions_page.tools import (
     update_intention_status_executor,
     list_intentions_executor,
     get_intention_details_executor,
-    update_intention_executor
+    update_intention_executor,
+    delete_intention_executor
 )
 
 User = get_user_model()
@@ -1067,15 +1068,165 @@ class UpdateIntentionExecutorTest(TestCase):
             creator=self.user,
             froggy=True
         )
-        
+
         # Move a non-frog intention to tomorrow (should succeed)
         tool_input = {
             'intention_id': self.intention.id,
             'date': tomorrow.isoformat()
         }
         result = update_intention_executor(tool_input, user=self.user)
-        
+
         # Should succeed since we're not moving a frog
         self.assertEqual(result['date'], tomorrow.isoformat())
         self.intention.refresh_from_db()
         self.assertEqual(self.intention.date, tomorrow)
+
+
+class DeleteIntentionExecutorTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='otherpass123'
+        )
+        self.today = date.today()
+
+        self.intention = Intention.objects.create(
+            title='Test task',
+            date=self.today,
+            creator=self.user
+        )
+
+    def test_delete_intention_successfully(self):
+        intention_id = self.intention.id
+        intention_title = self.intention.title
+
+        tool_input = {
+            'intention_id': intention_id
+        }
+        result = delete_intention_executor(tool_input, user=self.user)
+
+        # Verify result
+        self.assertEqual(result['intention_id'], intention_id)
+        self.assertEqual(result['title'], intention_title)
+        self.assertEqual(result['date'], self.today.isoformat())
+        self.assertIn('Successfully deleted', result['message'])
+
+        # Verify intention is deleted from database
+        with self.assertRaises(Intention.DoesNotExist):
+            Intention.objects.get(id=intention_id)
+
+    def test_delete_intention_missing_id(self):
+        tool_input = {}
+
+        with self.assertRaisesMessage(ValueError, 'intention_id is required'):
+            delete_intention_executor(tool_input, user=self.user)
+
+    def test_delete_intention_invalid_id_type(self):
+        tool_input = {
+            'intention_id': 'not_an_int'
+        }
+
+        with self.assertRaisesMessage(ValueError, 'intention_id must be an integer'):
+            delete_intention_executor(tool_input, user=self.user)
+
+    def test_delete_intention_nonexistent_id(self):
+        tool_input = {
+            'intention_id': 99999
+        }
+
+        with self.assertRaisesMessage(ValueError, "not found or doesn't belong to you"):
+            delete_intention_executor(tool_input, user=self.user)
+
+    def test_delete_intention_wrong_user(self):
+        # Try to delete another user's intention
+        tool_input = {
+            'intention_id': self.intention.id
+        }
+
+        with self.assertRaisesMessage(ValueError, "not found or doesn't belong to you"):
+            delete_intention_executor(tool_input, user=self.other_user)
+
+        # Verify intention still exists
+        self.assertTrue(Intention.objects.filter(id=self.intention.id).exists())
+
+    def test_delete_frog_intention(self):
+        # Create a frog intention
+        frog = Intention.objects.create(
+            title='My frog task',
+            date=self.today,
+            creator=self.user,
+            froggy=True
+        )
+
+        tool_input = {
+            'intention_id': frog.id
+        }
+        result = delete_intention_executor(tool_input, user=self.user)
+
+        # Should delete successfully
+        self.assertEqual(result['intention_id'], frog.id)
+        with self.assertRaises(Intention.DoesNotExist):
+            Intention.objects.get(id=frog.id)
+
+    def test_delete_completed_intention(self):
+        # Create a completed intention
+        completed = Intention.objects.create(
+            title='Completed task',
+            date=self.today,
+            creator=self.user,
+            completed=True
+        )
+
+        tool_input = {
+            'intention_id': completed.id
+        }
+        result = delete_intention_executor(tool_input, user=self.user)
+
+        # Should delete successfully
+        self.assertEqual(result['intention_id'], completed.id)
+        with self.assertRaises(Intention.DoesNotExist):
+            Intention.objects.get(id=completed.id)
+
+    def test_delete_sticky_intention(self):
+        # Create a sticky intention
+        sticky = Intention.objects.create(
+            title='Sticky task',
+            date=self.today,
+            creator=self.user,
+            sticky=True
+        )
+
+        tool_input = {
+            'intention_id': sticky.id
+        }
+        result = delete_intention_executor(tool_input, user=self.user)
+
+        # Should delete successfully
+        self.assertEqual(result['intention_id'], sticky.id)
+        with self.assertRaises(Intention.DoesNotExist):
+            Intention.objects.get(id=sticky.id)
+
+    def test_delete_does_not_affect_other_intentions(self):
+        # Create another intention
+        other_intention = Intention.objects.create(
+            title='Other task',
+            date=self.today,
+            creator=self.user
+        )
+
+        # Delete the first intention
+        tool_input = {
+            'intention_id': self.intention.id
+        }
+        delete_intention_executor(tool_input, user=self.user)
+
+        # Verify other intention still exists
+        self.assertTrue(Intention.objects.filter(id=other_intention.id).exists())
+        other_intention.refresh_from_db()
+        self.assertEqual(other_intention.title, 'Other task')
