@@ -351,11 +351,6 @@ html, body {
 #page_wrapper {
   position: relative;
   min-height: 100%;
-  margin-right: 380px; // Make room for permanent chat sidebar
-
-  @media (max-width: 768px) {
-    margin-right: 0; // No margin on mobile (sidebar is toggleable)
-  }
 }
 
 #_content {

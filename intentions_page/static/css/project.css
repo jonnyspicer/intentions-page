@@ -487,12 +487,6 @@ html, body {
 #page_wrapper {
   position: relative;
   min-height: 100%;
-  margin-right: 380px;
-}
-@media (max-width: 768px) {
-  #page_wrapper {
-    margin-right: 0;
-  }
 }
 
 #_content {
