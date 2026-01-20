@@ -1,0 +1,1213 @@
+// ================================
+// FONTS
+// ================================
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Jost:wght@300;400;500;600;700&display=swap');
+
+// ================================
+// CSS CUSTOM PROPERTIES (VARIABLES)
+// ================================
+
+:root {
+  // jonnyspicer.com color palette
+  --color-pink: #ef476f;
+  --color-yellow: #ffd166;
+  --color-green: #06d6a0;
+  --color-light-blue: #118ab2;
+  --color-dark-blue: #073b4c;
+  --color-darkmode-blue: #2364AA;
+
+  // Grayscale
+  --color-white: #fff;
+  --color-black: #000;
+  --color-grey-very-light: #eaeaea;
+  --color-grey-light: #999;
+  --color-grey-medium: #777;
+  --color-grey-dark: #555;
+  --color-grey-very-dark: #333;
+  --color-darkmode-text: #dddddd;
+  --color-darkmode-background: #1b1b1b;
+
+  // Backgrounds
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
+
+  // Text
+  --text-primary: #000000;
+  --text-secondary: #777777;
+  --text-muted: #999999;
+
+  // Alerts (existing colors)
+  --mint-green: #d6e9c6;
+  --pink: #f2dede;
+  --dark-pink: #eed3d7;
+  --red: #b94a48;
+
+  // Interactive - using jonnyspicer.com colors
+  --link-color: #000000;
+  --link-underline-color: #ef476f;
+  --link-hover-color: #ef476f;
+  --hover-bg: rgba(239, 71, 111, 0.1);
+  --focus-bg: rgba(255, 209, 102, 0.2);
+  --border-color: #eaeaea;
+
+  // Bootstrap components
+  --navbar-bg: #ffffff;
+  --navbar-text: #000000;
+  --navbar-border: #eaeaea;
+  --footer-bg: #ffffff;
+  --footer-text: #000000;
+  --modal-bg: #ffffff;
+  --modal-border: #eaeaea;
+  --dropdown-bg: #ffffff;
+  --dropdown-text: #000000;
+  --dropdown-hover-bg: #f8f9fa;
+  --btn-secondary-bg: transparent;
+  --btn-secondary-text: #000000;
+  --btn-secondary-border: transparent;
+  --form-control-bg: #ffffff;
+  --form-control-text: #000000;
+  --form-control-border: #eaeaea;
+  --form-control-placeholder: #999999;
+}
+
+// ================================
+// DARK MODE OVERRIDES
+// ================================
+
+[data-theme="dark"] {
+  // Backgrounds
+  --bg-primary: #1b1b1b;
+  --bg-secondary: #2d2d2d;
+  --bg-tertiary: #3a3a3a;
+
+  // Text
+  --text-primary: #dddddd;
+  --text-secondary: #b0b0b0;
+  --text-muted: #808080;
+
+  // Alerts
+  --mint-green: #4a7c59;
+  --pink: #6b3a3a;
+  --dark-pink: #7d4d4d;
+  --red: #e57373;
+
+  // Interactive
+  --link-color: #dddddd;
+  --link-underline-color: #2364AA;
+  --link-hover-color: #2364AA;
+  --hover-bg: rgba(35, 100, 170, 0.15);
+  --focus-bg: rgba(35, 100, 170, 0.15);
+  --border-color: #4a4a4a;
+
+  // Bootstrap components
+  --navbar-bg: #1b1b1b;
+  --navbar-text: #dddddd;
+  --navbar-border: #4a4a4a;
+  --footer-bg: #1b1b1b;
+  --footer-text: #dddddd;
+  --modal-bg: #2d2d2d;
+  --modal-border: #4a4a4a;
+  --dropdown-bg: #3a3a3a;
+  --dropdown-text: #dddddd;
+  --dropdown-hover-bg: #4a4a4a;
+  --btn-secondary-bg: #3a3a3a;
+  --btn-secondary-text: #dddddd;
+  --btn-secondary-border: #4a4a4a;
+  --form-control-bg: #2d2d2d;
+  --form-control-text: #dddddd;
+  --form-control-border: #4a4a4a;
+  --form-control-placeholder: #808080;
+
+  // Meta directive for native form controls
+  color-scheme: dark;
+}
+
+// ================================
+// GLOBAL STYLES
+// ================================
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+body {
+  font-family: "Jost", Helvetica, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+// Typography
+h1 {
+  font-family: "Playfair Display", serif;
+  color: var(--color-black);
+  font-weight: normal;
+  display: inline;
+  background-size: 100% 0.4em;
+  background-repeat: no-repeat;
+  background-position: 0 0.9em;
+  background-image: linear-gradient(var(--color-darkmode-blue), var(--color-darkmode-blue));
+
+  &.big-title {
+    font-size: 6em;
+    background-image: linear-gradient(var(--color-yellow), var(--color-yellow));
+  }
+
+  [data-theme="dark"] & {
+    color: var(--color-darkmode-text);
+    background-image: linear-gradient(var(--color-darkmode-blue), var(--color-darkmode-blue));
+
+    &.big-title {
+      background-image: linear-gradient(var(--color-darkmode-blue), var(--color-darkmode-blue));
+    }
+  }
+}
+
+h2 {
+  margin: 30px 0 10px;
+  font-family: "Jost", Helvetica, sans-serif;
+  color: var(--color-black);
+  font-weight: normal;
+
+  &.big-title {
+    font-size: 2em;
+  }
+
+  [data-theme="dark"] & {
+    color: var(--color-darkmode-text);
+  }
+}
+
+h3, h4, h5, h6 {
+  font-family: "Jost", Helvetica, sans-serif;
+  color: var(--color-black);
+  font-weight: normal;
+
+  [data-theme="dark"] & {
+    color: var(--color-darkmode-text);
+  }
+}
+
+// Base text styles - applied more selectively to avoid breaking UI elements
+p, footer {
+  font-family: "Jost", Helvetica, sans-serif;
+  color: var(--text-primary);
+  font-size: 16px;
+  line-height: 1.4;
+  margin-bottom: 1rem;
+
+  &.bigger {
+    font-size: 1.2em;
+  }
+
+  [data-theme="dark"] & {
+    color: var(--color-darkmode-text);
+  }
+}
+
+// Buttons and interactive elements should not have content padding
+button, .btn {
+  font-family: "Jost", Helvetica, sans-serif;
+}
+
+// List items in content areas (not UI lists)
+main p, main li {
+  line-height: 1.4;
+}
+
+a {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline-color);
+
+  &:hover,
+  &:focus {
+    color: var(--link-hover-color);
+  }
+}
+
+blockquote {
+  font-style: italic;
+  padding: 0.5em 10px;
+  quotes: "\201C""\201D""\2018""\2019";
+  line-height: 0.1em;
+  margin-inline-start: 0;
+
+  &:before {
+    color: var(--color-green);
+    content: open-quote;
+    font-size: 4em;
+    line-height: 0.1em;
+    margin-right: 0.25em;
+    vertical-align: -0.4em;
+  }
+
+  p {
+    display: inline;
+  }
+}
+
+code {
+  background-color: #dcdcdc;
+  font-family: monospace;
+  box-sizing: border-box;
+  padding: 2px;
+  border-radius: 5px;
+  font-size: 14px;
+
+  [data-theme="dark"] & {
+    background-color: #dcdcdc24;
+  }
+}
+
+pre {
+  border-radius: 5px;
+
+  code {
+    display: block;
+    overflow-x: scroll;
+    padding: 20px;
+
+    span {
+      padding: 0;
+    }
+  }
+}
+
+// Remove default list styling for content areas (but not for Bootstrap UI)
+main ul:not(.navbar-nav):not(.dropdown-menu) {
+  list-style-type: none;
+}
+
+// Hide specific form labels in dropdowns where they're redundant
+// But keep the intention_title label visible
+.nevermind_button,
+.sticky_button,
+.froggy_button,
+.anxiety_button {
+  cursor: pointer;
+}
+
+// Keep labels for screen readers but visually hidden where appropriate
+.notes-edit-form label:not(.intention_title) {
+  display: none;
+}
+
+main {
+  width: calc(100% - 40px);
+  max-width: 600px;
+  margin: 0 auto;
+  flex: 1 0 auto;
+  padding: 40px 20px 20px;
+}
+
+footer {
+  flex-shrink: 0;
+  text-align: center;
+  padding: 20px;
+  font-size: 12px;
+
+  a {
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+// ================================
+// ALERTS
+// ================================
+
+.alert-debug {
+  background-color: var(--mint-green);
+  border-color: var(--mint-green);
+  color: var(--text-primary);
+}
+
+.alert-error {
+  background-color: var(--pink);
+  border-color: var(--dark-pink);
+  color: var(--red);
+}
+
+// ================================
+// BOOTSTRAP COMPONENT OVERRIDES
+// ================================
+
+// Navbar
+.navbar {
+  background-color: var(--navbar-bg) !important;
+  border-color: var(--navbar-border);
+  margin-bottom: 0.5rem;
+
+  .navbar-brand,
+  .nav-link {
+    color: var(--navbar-text) !important;
+    font-family: "Jost", Helvetica, sans-serif;
+  }
+
+  .navbar-brand .text-muted {
+    color: var(--text-secondary) !important;
+  }
+}
+
+// Theme toggle button styling
+#theme-toggle-btn {
+  color: var(--navbar-text);
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+
+  &:hover {
+    color: var(--link-hover-color);
+    background: transparent;
+  }
+
+  &:focus {
+    box-shadow: none;
+  }
+}
+
+// Footer
+.footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 60px;
+  line-height: 60px;
+  background-color: var(--footer-bg);
+  color: var(--footer-text);
+}
+
+// Modals
+.modal-content {
+  background-color: var(--modal-bg);
+  border-color: var(--modal-border);
+  color: var(--text-primary);
+}
+
+.modal-header,
+.modal-footer {
+  border-color: var(--border-color);
+}
+
+// Dropdowns
+.dropdown-menu {
+  background-color: var(--dropdown-bg);
+  border-color: var(--border-color);
+}
+
+.dropdown-item {
+  color: var(--dropdown-text);
+
+  &:hover,
+  &:focus {
+    background-color: var(--dropdown-hover-bg);
+    color: var(--dropdown-text);
+  }
+}
+
+// Buttons
+.btn-secondary {
+  background-color: var(--btn-secondary-bg);
+  border-color: var(--btn-secondary-border);
+  color: var(--btn-secondary-text);
+
+  &:hover {
+    background-color: var(--bg-tertiary);
+    border-color: var(--border-color);
+  }
+}
+
+.btn-outline-secondary {
+  color: var(--text-primary);
+  border-color: var(--border-color);
+
+  &:hover {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+}
+
+// Forms
+.form-control {
+  background-color: var(--form-control-bg);
+  color: var(--form-control-text);
+  border-color: var(--form-control-border);
+
+  &:focus {
+    background-color: var(--form-control-bg);
+    color: var(--form-control-text);
+    border-color: var(--color-light-blue);
+  }
+
+  &::placeholder {
+    color: var(--form-control-placeholder);
+  }
+}
+
+textarea.form-control {
+  background-color: var(--form-control-bg);
+  color: var(--form-control-text);
+  resize: both;
+}
+
+// ================================
+// COMPONENT-SPECIFIC STYLES
+// ================================
+
+#application {
+  margin: .5em;
+}
+
+.today-intentions-draft form {
+  display: flex;
+  margin-top: 1em;
+}
+
+.today-intentions-draft .intentions-draft-fields {
+  width: 100%;
+}
+
+.today-intentions-draft button {
+  height: 100%;
+}
+
+.intention[status='completed'] .intention_title {
+  text-decoration: line-through;
+}
+
+.intention[status='neverminded'] .intention_title {
+  text-decoration: line-through;
+  opacity: 0.5;
+  color: var(--red);
+  pointer-events: none;
+}
+
+.intention[status='neverminded'] .complete_check {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+input[name="neverminded"] {
+  display: none;
+}
+
+.intention:hover {
+  background-color: var(--hover-bg);
+}
+
+.intention form {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.intention_title {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem; // Add spacing between checkbox and text
+  font-family: "Jost", Helvetica, sans-serif;
+  font-size: 16px;
+}
+
+// Add spacing to icons and checkbox
+.complete_check {
+  display: flex;
+  align-items: center;
+  margin-right: 0.25rem;
+}
+
+.sticky-icon,
+.froggy-icon,
+.anxiety-icon,
+.recurring-icon {
+  margin-right: 0.25rem;
+}
+
+.intention_buttons .dropdown-toggle,
+.intention_title {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.day {
+  margin-bottom: 1em;
+}
+
+.intention_list,
+.today-intentions-draft,
+.notes-accordion,
+.tomorrow-intentions-draft-accordion {
+  max-width: 50em;
+}
+
+.intention_list {
+  margin-bottom: 1rem;
+}
+
+// Customize Bootstrap dropdown-toggle for intentions
+.intention .dropdown-toggle {
+  background-color: transparent;
+  border: transparent;
+  color: var(--text-primary);
+
+  &::after {
+    display: none;
+  }
+}
+
+.intentions_brand {
+  font-weight: bolder;
+}
+
+.intention_list [has_keyboard_focus] {
+  background-color: var(--focus-bg);
+}
+
+html, body {
+  height: 100%;
+}
+
+#page_wrapper {
+  position: relative;
+  min-height: 100%;
+  margin-right: 380px; // Make room for permanent chat sidebar
+
+  @media (max-width: 768px) {
+    margin-right: 0; // No margin on mobile (sidebar is toggleable)
+  }
+}
+
+#_content {
+  padding-bottom: 120px;
+}
+
+@media (hover: none) {
+  #keyboardShortcutLink {
+    display: none;
+  }
+}
+
+#keyboardShortcutModal td,
+#keyboardShortcutModal th {
+  padding-bottom: 0;
+  padding-top: 0;
+}
+
+.footer .container > * {
+  margin-right: 1em;
+}
+
+.notes-accordion {
+  border: none;
+  margin-bottom: 1rem;
+}
+
+.tomorrow-intentions-draft-accordion {
+  margin-bottom: 1rem;
+}
+
+// Add spacing between dropdown toggle and content
+.collapseNotes,
+.collapseTomorrowEdit {
+  margin-top: 0.5rem;
+}
+
+.notesLink,
+.tomorrowEditLink {
+  cursor: pointer;
+  border: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 0.75rem; // Add spacing between button and dropdown
+
+  .chevron-icon {
+    margin-left: 0.5rem;
+    transition: transform 0.3s ease;
+  }
+
+  // Rotate chevron when expanded
+  &:not(.collapsed) .chevron-icon {
+    transform: rotate(180deg);
+  }
+}
+
+.notes-edit-form .form-group {
+  margin-bottom: 0;
+}
+
+.login-or {
+  margin-bottom: 1rem;
+  margin-top: 1rem;
+  font-weight: bold;
+}
+
+.socialaccount_providers li {
+  list-style: none;
+}
+
+.socialaccount_logo {
+  height: 1.5rem;
+  vertical-align: bottom;
+}
+
+#privacyPolicyLink {
+  color: var(--text-primary);
+}
+
+// ================================
+// DARK MODE SPECIFIC REFINEMENTS
+// ================================
+
+[data-theme="dark"] {
+  // Make sure images/icons don't appear too bright
+  img {
+    opacity: 0.9;
+  }
+
+  // Adjust borders to be more visible
+  .card,
+  .modal-content,
+  .dropdown-menu {
+    border-width: 1px;
+  }
+
+  // Ensure table styles work in dark mode
+  .table {
+    color: var(--text-primary);
+
+    thead th {
+      border-bottom-color: var(--border-color);
+    }
+
+    td, th {
+      border-top-color: var(--border-color);
+    }
+  }
+
+  .table-striped tbody tr:nth-of-type(odd) {
+    background-color: var(--bg-secondary);
+  }
+
+  // Close buttons in modals
+  .close {
+    color: var(--text-primary);
+    text-shadow: none;
+    opacity: 0.8;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+// ================================
+// STICKY INTENTIONS
+// ================================
+
+// Hide sticky checkbox input (like neverminded)
+input[name="sticky"] {
+  display: none;
+}
+
+// Sticky pin icon styling
+.sticky-icon {
+  color: var(--color-light-blue);
+  margin-left: 0.25em;
+  margin-right: 0.25em;
+  font-size: 0.9em;
+}
+
+// Dropdown item styling for sticky button
+.sticky_button {
+  cursor: pointer;
+}
+
+// ================================
+// FROGGY INTENTIONS
+// ================================
+
+// Hide froggy checkbox input (like sticky/neverminded)
+input[name="froggy"] {
+  display: none;
+}
+
+// Froggy emoji styling
+.froggy-icon {
+  margin-left: 0.25em;
+  margin-right: 0.25em;
+  font-size: 1em;
+}
+
+// Dropdown item styling for froggy button
+.froggy_button {
+  cursor: pointer;
+}
+
+// ================================
+// ANXIETY-INDUCING INTENTIONS
+// ================================
+
+// Hide anxiety_inducing checkbox input
+input[name="anxiety_inducing"] {
+  display: none;
+}
+
+// Lightning bolt emoji styling
+.anxiety-icon {
+  margin-left: 0.25em;
+  margin-right: 0.25em;
+  font-size: 1em;
+}
+
+// Dropdown item styling for anxiety button
+.anxiety_button {
+  cursor: pointer;
+}
+
+// ================================
+// CHAT SIDEBAR
+// ================================
+
+// Floating toggle button (hidden on desktop, visible on mobile)
+.chat-toggle-btn {
+  display: none; // Hidden by default on desktop
+
+  @media (max-width: 768px) {
+    display: flex;
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+  }
+}
+
+// Sidebar container
+.chat-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0; // Always visible on desktop
+  width: 380px;
+  height: 100vh;
+  background-color: var(--bg-primary);
+  border-left: 1px solid var(--border-color);
+  box-shadow: -2px 0 16px rgba(0, 0, 0, 0.08);
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+
+  // Mobile: hide by default, show when toggled
+  @media (max-width: 768px) {
+    right: -100vw;
+    width: 100vw;
+    max-width: 100vw;
+    transition: right 0.3s ease;
+
+    &[data-visible="true"] {
+      right: 0;
+    }
+  }
+}
+
+// Sidebar header
+.chat-sidebar-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--bg-primary);
+}
+
+.chat-sidebar-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+#chat-close-btn {
+  display: none; // Hidden on desktop (sidebar is permanent)
+  color: var(--text-secondary);
+  padding: 0.25rem;
+
+  &:hover {
+    color: var(--text-primary);
+  }
+
+  @media (max-width: 768px) {
+    display: block; // Visible on mobile (sidebar is toggleable)
+  }
+}
+
+// Messages container
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.chat-welcome {
+  background-color: var(--bg-secondary);
+  padding: 1rem;
+  border-radius: 8px;
+  color: var(--text-primary);
+
+  ul {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+  }
+}
+
+// Individual messages
+.chat-message {
+  padding: 0.875rem 1.125rem;
+  border-radius: 12px;
+  max-width: 85%;
+  word-wrap: break-word;
+  line-height: 1.5;
+  font-size: 0.9375rem;
+}
+
+.chat-message-user {
+  background-color: var(--color-light-blue);
+  color: white;
+  align-self: flex-end;
+  margin-left: auto;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.chat-message-assistant {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  align-self: flex-start;
+
+  // Markdown styling
+  p {
+    margin: 0 0 0.75rem 0;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    margin: 1rem 0 0.5rem 0;
+    font-weight: 600;
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.3rem; }
+  h3 { font-size: 1.1rem; }
+  h4, h5, h6 { font-size: 1rem; }
+
+  ul, ol {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+
+    li {
+      margin: 0.25rem 0;
+    }
+  }
+
+  code {
+    background-color: rgba(0, 0, 0, 0.1);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+  }
+
+  pre {
+    background-color: rgba(0, 0, 0, 0.1);
+    padding: 0.75rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+
+    code {
+      background-color: transparent;
+      padding: 0;
+    }
+  }
+
+  blockquote {
+    border-left: 3px solid var(--border-color);
+    margin: 0.5rem 0;
+    padding-left: 1rem;
+    color: var(--text-secondary);
+  }
+
+  a {
+    color: var(--link-color);
+    text-decoration: underline;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  strong {
+    font-weight: 600;
+  }
+
+  em {
+    font-style: italic;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 1rem 0;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.5rem 0;
+
+    th, td {
+      border: 1px solid var(--border-color);
+      padding: 0.5rem;
+      text-align: left;
+    }
+
+    th {
+      background-color: rgba(0, 0, 0, 0.05);
+      font-weight: 600;
+    }
+  }
+}
+
+.chat-message-system {
+  background-color: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-style: italic;
+  align-self: center;
+  max-width: 100%;
+}
+
+// Loading indicator
+.chat-loading {
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary);
+  margin: 0 1rem;
+}
+
+// Input container
+.chat-input-container {
+  border-top: 1px solid var(--border-color);
+  padding: 1.25rem 1.5rem;
+  background-color: var(--bg-primary);
+}
+
+.chat-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.chat-checkbox-label {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  cursor: pointer;
+  color: var(--text-secondary);
+
+  input {
+    margin-right: 0.5rem;
+  }
+}
+
+.chat-input-wrapper {
+  position: relative;
+  display: flex;
+}
+
+.chat-input {
+  flex: 1;
+  resize: none; // Disable manual resize, autosize will handle it
+  min-height: 56px;
+  max-height: 200px; // Max height before scrolling
+  overflow-y: auto; // Show scrollbar only when exceeds max-height
+  background-color: var(--form-control-bg);
+  color: var(--form-control-text);
+  border: 1.5px solid var(--form-control-border);
+  border-radius: 12px;
+  padding: 6px 3.25rem 6px 1rem; // Minimal padding, extra on right for button
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  transition: border-color 0.2s ease, height 0.1s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-light-blue);
+  }
+}
+
+.chat-send-btn {
+  position: absolute;
+  right: 6px;
+  bottom: 6px; // 6px margin from bottom edge
+  height: 44px; // Fills most of single-line height, stays fixed when multi-line
+  width: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: none;
+  background-color: var(--color-light-blue);
+  color: white;
+  font-size: 1.125rem;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: var(--color-light-blue);
+    opacity: 0.9;
+    transform: scale(1.05);
+    color: white;
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Tool execution badges
+.chat-tools-used {
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chat-tool-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background-color: #f0f0f0;
+}
+
+.chat-tool-badge.success {
+  background-color: rgba(6, 214, 160, 0.2);
+  color: #155724;
+  border-left: 3px solid var(--color-green);
+}
+
+.chat-tool-badge.error {
+  background-color: rgba(239, 71, 111, 0.2);
+  color: #721c24;
+  border-left: 3px solid var(--color-pink);
+}
+
+.chat-tool-badge i {
+  font-size: 1rem;
+}
+
+.chat-tool-badge .tool-name {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.chat-tool-badge .tool-result {
+  color: #666;
+  margin-left: auto;
+  font-size: 0.8rem;
+}
+
+.chat-message-content {
+  margin-top: 4px;
+}
+
+// Dark mode adjustments
+[data-theme=dark] {
+  .chat-message-user {
+    background-color: var(--color-darkmode-blue);
+  }
+
+  .chat-sidebar {
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.5);
+  }
+
+  .chat-message-assistant {
+    code {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    pre {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    table th {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+  }
+
+  .chat-tool-badge {
+    background-color: #2d2d2d;
+  }
+
+  .chat-tool-badge.success {
+    background-color: rgba(6, 214, 160, 0.1);
+    color: #7dcc7d;
+  }
+
+  .chat-tool-badge.error {
+    background-color: rgba(239, 71, 111, 0.1);
+    color: #cc7d7d;
+  }
+
+  .chat-tool-badge .tool-result {
+    color: #aaa;
+  }
+}

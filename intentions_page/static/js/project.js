@@ -376,6 +376,42 @@ function intentionBindHandlers (intention) {
         intentionEditAJAX(form, intention)
         e.preventDefault()
     })
+
+    // Handle recurring button click via AJAX instead of form submit
+    $(intention).find('.recurring_button').on('click', function(e) {
+        e.preventDefault()
+        var button = $(e.target)
+        var form = button.closest('form')
+        var intention = button.closest('.intention')
+
+        // Serialize form data and add the button's name/value
+        var formData = form.serialize() + '&toggle_recurring=1'
+
+        // Custom AJAX call with button data
+        $.ajax({
+            type: form.attr('method').toUpperCase(),
+            url: form.attr('action'),
+            data: formData,
+
+            success: function (data){
+                // parses the string into an array of DOM nodes
+                nodes = $.parseHTML(data)
+                nodes = $(nodes)
+
+                // Replace intention with updated HTML
+                intention.replaceWith(nodes)
+                intentionBindHandlers(nodes)
+
+                // If the intention we updated with Ajax had focus, it will have lost focus
+                getFocusFromLocalStorage()
+            },
+
+            error: function (data)
+            {
+                console.log(data)
+            }
+        })
+    })
 }
 
 for (const intention of $('.intention')) {

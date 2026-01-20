@@ -138,15 +138,19 @@ def edit(request, primary_key):
         if 'toggle_recurring' in request.POST:
             if intention.recurring_intention and intention.recurring_intention.is_active:
                 # Turn off recurring: deactivate the pattern
+                logger.info(f"Deactivating recurring for intention {intention.id}: {intention.title}")
                 intention.recurring_intention.is_active = False
                 intention.recurring_intention.save()
             elif intention.recurring_intention and not intention.recurring_intention.is_active:
                 # Reactivate an existing inactive pattern
+                logger.info(f"Reactivating recurring for intention {intention.id}: {intention.title}")
                 intention.recurring_intention.is_active = True
                 intention.recurring_intention.save()
             else:
                 # Turn on recurring: create a new daily pattern
-                intention.get_or_create_recurring_pattern()
+                logger.info(f"Creating new recurring pattern for intention {intention.id}: {intention.title}")
+                pattern, created = intention.get_or_create_recurring_pattern()
+                logger.info(f"RecurringIntention {pattern.id} created={created}")
 
             # Refresh the intention to get updated recurring status
             intention.refresh_from_db()
