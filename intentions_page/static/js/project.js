@@ -62,6 +62,12 @@ $('#theme-toggle-btn').on('click', function(e) {
     toggleTheme();
 });
 
+// Site navbar mobile toggle
+$('.site-header .toggle').on('click', function() {
+    $(this).toggleClass('is-active');
+    $('.site-header .site-nav').toggleClass('expanded');
+});
+
 // Cmd-Enter to submit on today's intentions draft
 // Notice that we don't submit on the form that received the shortcut, we submit promote_draft_to_intentions_form.
 draft = $('.today-intentions-draft')
