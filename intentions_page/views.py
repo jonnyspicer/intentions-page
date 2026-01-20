@@ -127,8 +127,9 @@ def promote_draft_to_intentions(request):
 
 
 @login_required
+@transaction.atomic
 def edit(request, primary_key):
-    intention = Intention.objects.get(id=primary_key)
+    intention = Intention.objects.select_for_update().get(id=primary_key)
 
     if intention.creator != get_user(request):
         raise PermissionDenied
