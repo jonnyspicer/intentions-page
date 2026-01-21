@@ -4,7 +4,7 @@
     'use strict';
 
     // State
-    let chatVisible = false;
+    let chatVisible = localStorage.getItem('chatSidebarVisible') === 'true';
     let isLoading = false;
     let showToolConfirmations = true; // Default to showing confirmations
 
@@ -26,17 +26,30 @@
         autosize(chatInput);
     }
 
+    // Initialize sidebar visibility from saved state
+    chatSidebar.setAttribute('data-visible', chatVisible);
+    if (chatVisible) {
+        chatToggleBtn.classList.add('sidebar-open');
+    }
+
     // Load chat history on page load
     loadChatHistory();
 
-    // Toggle sidebar visibility (primarily for mobile)
+    // Toggle sidebar visibility (works on both desktop and mobile)
     function toggleChat() {
         chatVisible = !chatVisible;
         chatSidebar.setAttribute('data-visible', chatVisible);
 
+        // Update button state
         if (chatVisible) {
+            chatToggleBtn.classList.add('sidebar-open');
             chatInput.focus();
+        } else {
+            chatToggleBtn.classList.remove('sidebar-open');
         }
+
+        // Save state to localStorage
+        localStorage.setItem('chatSidebarVisible', chatVisible);
     }
 
     // Load chat history from server
