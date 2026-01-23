@@ -40,7 +40,7 @@
         chatVisible = !chatVisible;
         chatSidebar.setAttribute('data-visible', chatVisible);
 
-        // Update button state
+        // Update button state (CSS handles icon rotation via transform)
         if (chatVisible) {
             chatToggleBtn.classList.add('sidebar-open');
             chatInput.focus();

@@ -1,4 +1,10 @@
 // ================================
+// IMPORTS
+// ================================
+
+@import 'custom_bootstrap_vars';
+
+// ================================
 // CSS CUSTOM PROPERTIES (VARIABLES)
 // ================================
 
@@ -529,6 +535,10 @@ input[name="anxiety_inducing"] {
   z-index: 1002; // Above sidebar
   transition: all 0.3s ease;
 
+  .chat-toggle-icon {
+    transition: transform 0.3s ease;
+  }
+
   // Desktop styling: tab on the right edge
   @media (min-width: 769px) {
     top: 50%;
@@ -545,13 +555,16 @@ input[name="anxiety_inducing"] {
     border: none;
 
     &:hover {
-      width: 52px;
       box-shadow: -3px 0 12px rgba(0, 0, 0, 0.25);
     }
 
     // When sidebar is visible, move button with it
     &.sidebar-open {
       right: 380px;
+
+      .chat-toggle-icon {
+        transform: rotate(180deg);
+      }
     }
   }
 
@@ -566,8 +579,13 @@ input[name="anxiety_inducing"] {
     font-size: 24px;
 
     &:hover {
-      transform: scale(1.1);
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    &.sidebar-open {
+      .chat-toggle-icon {
+        transform: rotate(180deg);
+      }
     }
   }
 }

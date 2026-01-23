@@ -1,23 +1,12 @@
-// ================================
-// FONTS
-// ================================
-
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Jost:wght@300;400;500;600;700&display=swap');
-
-// ================================
-// CSS CUSTOM PROPERTIES (VARIABLES)
-// ================================
-
+@charset "UTF-8";
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Jost:wght@300;400;500;600;700&display=swap");
 :root {
-  // jonnyspicer.com color palette
   --color-pink: #ef476f;
   --color-yellow: #ffd166;
   --color-green: #06d6a0;
   --color-light-blue: #118ab2;
   --color-dark-blue: #073b4c;
   --color-darkmode-blue: #2364AA;
-
-  // Grayscale
   --color-white: #fff;
   --color-black: #000;
   --color-grey-very-light: #eaeaea;
@@ -27,32 +16,22 @@
   --color-grey-very-dark: #333;
   --color-darkmode-text: #dddddd;
   --color-darkmode-background: #1b1b1b;
-
-  // Backgrounds
   --bg-primary: #ffffff;
   --bg-secondary: #f8f9fa;
   --bg-tertiary: #e9ecef;
-
-  // Text
   --text-primary: #000000;
   --text-secondary: #777777;
   --text-muted: #999999;
-
-  // Alerts (existing colors)
   --mint-green: #d6e9c6;
   --pink: #f2dede;
   --dark-pink: #eed3d7;
   --red: #b94a48;
-
-  // Interactive - using jonnyspicer.com colors
   --link-color: #000000;
   --link-underline-color: #ef476f;
   --link-hover-color: #ef476f;
   --hover-bg: rgba(239, 71, 111, 0.1);
   --focus-bg: rgba(255, 209, 102, 0.2);
   --border-color: #eaeaea;
-
-  // Bootstrap components
   --navbar-bg: #ffffff;
   --navbar-text: #000000;
   --navbar-border: #eaeaea;
@@ -72,36 +51,23 @@
   --form-control-placeholder: #999999;
 }
 
-// ================================
-// DARK MODE OVERRIDES
-// ================================
-
-[data-theme="dark"] {
-  // Backgrounds
+[data-theme=dark] {
   --bg-primary: #1b1b1b;
   --bg-secondary: #2d2d2d;
   --bg-tertiary: #3a3a3a;
-
-  // Text
   --text-primary: #dddddd;
   --text-secondary: #b0b0b0;
   --text-muted: #808080;
-
-  // Alerts
   --mint-green: #4a7c59;
   --pink: #6b3a3a;
   --dark-pink: #7d4d4d;
   --red: #e57373;
-
-  // Interactive
   --link-color: #dddddd;
   --link-underline-color: #2364AA;
   --link-hover-color: #2364AA;
   --hover-bg: rgba(35, 100, 170, 0.15);
   --focus-bg: rgba(35, 100, 170, 0.15);
   --border-color: #4a4a4a;
-
-  // Bootstrap components
   --navbar-bg: #1b1b1b;
   --navbar-text: #dddddd;
   --navbar-border: #4a4a4a;
@@ -119,14 +85,8 @@
   --form-control-text: #dddddd;
   --form-control-border: #4a4a4a;
   --form-control-placeholder: #808080;
-
-  // Meta directive for native form controls
   color-scheme: dark;
 }
-
-// ================================
-// GLOBAL STYLES
-// ================================
 
 html,
 body {
@@ -143,7 +103,6 @@ body {
   flex-direction: column;
 }
 
-// Typography
 h1 {
   font-family: "Playfair Display", serif;
   color: var(--color-black);
@@ -153,20 +112,17 @@ h1 {
   background-repeat: no-repeat;
   background-position: 0 0.9em;
   background-image: linear-gradient(var(--color-darkmode-blue), var(--color-darkmode-blue));
-
-  &.big-title {
-    font-size: 6em;
-    background-image: linear-gradient(var(--color-yellow), var(--color-yellow));
-  }
-
-  [data-theme="dark"] & {
-    color: var(--color-darkmode-text);
-    background-image: linear-gradient(var(--color-darkmode-blue), var(--color-darkmode-blue));
-
-    &.big-title {
-      background-image: linear-gradient(var(--color-darkmode-blue), var(--color-darkmode-blue));
-    }
-  }
+}
+h1.big-title {
+  font-size: 6em;
+  background-image: linear-gradient(var(--color-yellow), var(--color-yellow));
+}
+[data-theme=dark] h1 {
+  color: var(--color-darkmode-text);
+  background-image: linear-gradient(var(--color-darkmode-blue), var(--color-darkmode-blue));
+}
+[data-theme=dark] h1.big-title {
+  background-image: linear-gradient(var(--color-darkmode-blue), var(--color-darkmode-blue));
 }
 
 h2 {
@@ -174,49 +130,41 @@ h2 {
   font-family: "Jost", Helvetica, sans-serif;
   color: var(--color-black);
   font-weight: normal;
-
-  &.big-title {
-    font-size: 2em;
-  }
-
-  [data-theme="dark"] & {
-    color: var(--color-darkmode-text);
-  }
+}
+h2.big-title {
+  font-size: 2em;
+}
+[data-theme=dark] h2 {
+  color: var(--color-darkmode-text);
 }
 
 h3, h4, h5, h6 {
   font-family: "Jost", Helvetica, sans-serif;
   color: var(--color-black);
   font-weight: normal;
-
-  [data-theme="dark"] & {
-    color: var(--color-darkmode-text);
-  }
+}
+[data-theme=dark] h3, [data-theme=dark] h4, [data-theme=dark] h5, [data-theme=dark] h6 {
+  color: var(--color-darkmode-text);
 }
 
-// Base text styles - applied more selectively to avoid breaking UI elements
 p, footer {
   font-family: "Jost", Helvetica, sans-serif;
   color: var(--text-primary);
   font-size: 16px;
   line-height: 1.4;
   margin-bottom: 1rem;
-
-  &.bigger {
-    font-size: 1.2em;
-  }
-
-  [data-theme="dark"] & {
-    color: var(--color-darkmode-text);
-  }
+}
+p.bigger, footer.bigger {
+  font-size: 1.2em;
+}
+[data-theme=dark] p, [data-theme=dark] footer {
+  color: var(--color-darkmode-text);
 }
 
-// Buttons and interactive elements should not have content padding
 button, .btn {
   font-family: "Jost", Helvetica, sans-serif;
 }
 
-// List items in content areas (not UI lists)
 main p, main li {
   line-height: 1.4;
 }
@@ -225,32 +173,28 @@ a {
   color: var(--link-color);
   text-decoration: underline;
   text-decoration-color: var(--link-underline-color);
-
-  &:hover,
-  &:focus {
-    color: var(--link-hover-color);
-  }
+}
+a:hover, a:focus {
+  color: var(--link-hover-color);
 }
 
 blockquote {
   font-style: italic;
   padding: 0.5em 10px;
-  quotes: "\201C""\201D""\2018""\2019";
+  quotes: "“" "”" "‘" "’";
   line-height: 0.1em;
   margin-inline-start: 0;
-
-  &:before {
-    color: var(--color-green);
-    content: open-quote;
-    font-size: 4em;
-    line-height: 0.1em;
-    margin-right: 0.25em;
-    vertical-align: -0.4em;
-  }
-
-  p {
-    display: inline;
-  }
+}
+blockquote:before {
+  color: var(--color-green);
+  content: open-quote;
+  font-size: 4em;
+  line-height: 0.1em;
+  margin-right: 0.25em;
+  vertical-align: -0.4em;
+}
+blockquote p {
+  display: inline;
 }
 
 code {
@@ -260,33 +204,27 @@ code {
   padding: 2px;
   border-radius: 5px;
   font-size: 14px;
-
-  [data-theme="dark"] & {
-    background-color: #dcdcdc24;
-  }
+}
+[data-theme=dark] code {
+  background-color: rgba(220, 220, 220, 0.1411764706);
 }
 
 pre {
   border-radius: 5px;
-
-  code {
-    display: block;
-    overflow-x: scroll;
-    padding: 20px;
-
-    span {
-      padding: 0;
-    }
-  }
+}
+pre code {
+  display: block;
+  overflow-x: scroll;
+  padding: 20px;
+}
+pre code span {
+  padding: 0;
 }
 
-// Remove default list styling for content areas (but not for Bootstrap UI)
 main ul:not(.navbar-nav):not(.dropdown-menu) {
   list-style-type: none;
 }
 
-// Hide specific form labels in dropdowns where they're redundant
-// But keep the intention_title label visible
 .nevermind_button,
 .sticky_button,
 .froggy_button,
@@ -294,7 +232,6 @@ main ul:not(.navbar-nav):not(.dropdown-menu) {
   cursor: pointer;
 }
 
-// Keep labels for screen readers but visually hidden where appropriate
 .notes-edit-form label:not(.intention_title) {
   display: none;
 }
@@ -310,21 +247,15 @@ main {
 footer {
   flex-shrink: 0;
   text-align: center;
+  padding: 20px;
   font-size: 12px;
-  margin: 0;
-
-  a {
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
 }
-
-// ================================
-// ALERTS
-// ================================
+footer a {
+  text-decoration: none;
+}
+footer a:hover {
+  text-decoration: underline;
+}
 
 .alert-debug {
   background-color: var(--mint-green);
@@ -338,59 +269,44 @@ footer {
   color: var(--red);
 }
 
-// ================================
-// BOOTSTRAP COMPONENT OVERRIDES
-// ================================
-
-// Navbar
 .navbar {
   background-color: var(--navbar-bg) !important;
   border-color: var(--navbar-border);
   margin-bottom: 0.5rem;
-
-  .navbar-brand,
-  .nav-link {
-    color: var(--navbar-text) !important;
-    font-family: "Jost", Helvetica, sans-serif;
-  }
-
-  .navbar-brand .text-muted {
-    color: var(--text-secondary) !important;
-  }
+}
+.navbar .navbar-brand,
+.navbar .nav-link {
+  color: var(--navbar-text) !important;
+  font-family: "Jost", Helvetica, sans-serif;
+}
+.navbar .navbar-brand .text-muted {
+  color: var(--text-secondary) !important;
 }
 
-// Theme toggle button styling
 #theme-toggle-btn {
   color: var(--navbar-text);
   padding: 0.5rem 1rem;
   border: none;
   background: transparent;
-
-  &:hover {
-    color: var(--link-hover-color);
-    background: transparent;
-  }
-
-  &:focus {
-    box-shadow: none;
-  }
+}
+#theme-toggle-btn:hover {
+  color: var(--link-hover-color);
+  background: transparent;
+}
+#theme-toggle-btn:focus {
+  box-shadow: none;
 }
 
-// Footer
 .footer {
   position: absolute;
   bottom: 0;
   width: 100%;
-  min-height: 60px;
-  padding: 20px;
+  height: 60px;
+  line-height: 60px;
   background-color: var(--footer-bg);
   color: var(--footer-text);
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-// Modals
 .modal-content {
   background-color: var(--modal-bg);
   border-color: var(--modal-border);
@@ -402,7 +318,6 @@ footer {
   border-color: var(--border-color);
 }
 
-// Dropdowns
 .dropdown-menu {
   background-color: var(--dropdown-bg);
   border-color: var(--border-color);
@@ -410,51 +325,43 @@ footer {
 
 .dropdown-item {
   color: var(--dropdown-text);
-
-  &:hover,
-  &:focus {
-    background-color: var(--dropdown-hover-bg);
-    color: var(--dropdown-text);
-  }
+}
+.dropdown-item:hover, .dropdown-item:focus {
+  background-color: var(--dropdown-hover-bg);
+  color: var(--dropdown-text);
 }
 
-// Buttons
 .btn-secondary {
   background-color: var(--btn-secondary-bg);
   border-color: var(--btn-secondary-border);
   color: var(--btn-secondary-text);
-
-  &:hover {
-    background-color: var(--bg-tertiary);
-    border-color: var(--border-color);
-  }
+}
+.btn-secondary:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-color);
 }
 
 .btn-outline-secondary {
   color: var(--text-primary);
   border-color: var(--border-color);
-
-  &:hover {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-  }
+}
+.btn-outline-secondary:hover {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
-// Forms
 .form-control {
   background-color: var(--form-control-bg);
   color: var(--form-control-text);
   border-color: var(--form-control-border);
-
-  &:focus {
-    background-color: var(--form-control-bg);
-    color: var(--form-control-text);
-    border-color: var(--color-light-blue);
-  }
-
-  &::placeholder {
-    color: var(--form-control-placeholder);
-  }
+}
+.form-control:focus {
+  background-color: var(--form-control-bg);
+  color: var(--form-control-text);
+  border-color: var(--color-light-blue);
+}
+.form-control::placeholder {
+  color: var(--form-control-placeholder);
 }
 
 textarea.form-control {
@@ -463,12 +370,8 @@ textarea.form-control {
   resize: both;
 }
 
-// ================================
-// COMPONENT-SPECIFIC STYLES
-// ================================
-
 #application {
-  margin: .5em;
+  margin: 0.5em;
 }
 
 .today-intentions-draft form {
@@ -484,23 +387,23 @@ textarea.form-control {
   height: 100%;
 }
 
-.intention[status='completed'] .intention_title {
+.intention[status=completed] .intention_title {
   text-decoration: line-through;
 }
 
-.intention[status='neverminded'] .intention_title {
+.intention[status=neverminded] .intention_title {
   text-decoration: line-through;
   opacity: 0.5;
   color: var(--red);
   pointer-events: none;
 }
 
-.intention[status='neverminded'] .complete_check {
+.intention[status=neverminded] .complete_check {
   opacity: 0.5;
   pointer-events: none;
 }
 
-input[name="neverminded"] {
+input[name=neverminded] {
   display: none;
 }
 
@@ -521,12 +424,11 @@ input[name="neverminded"] {
   color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 0.5rem; // Add spacing between checkbox and text
+  gap: 0.5rem;
   font-family: "Jost", Helvetica, sans-serif;
   font-size: 16px;
 }
 
-// Add spacing to icons and checkbox
 .complete_check {
   display: flex;
   align-items: center;
@@ -561,15 +463,13 @@ input[name="neverminded"] {
   margin-bottom: 1rem;
 }
 
-// Customize Bootstrap dropdown-toggle for intentions
 .intention .dropdown-toggle {
   background-color: transparent;
   border: transparent;
   color: var(--text-primary);
-
-  &::after {
-    display: none;
-  }
+}
+.intention .dropdown-toggle::after {
+  display: none;
 }
 
 .intentions_brand {
@@ -598,7 +498,6 @@ html, body {
     display: none;
   }
 }
-
 #keyboardShortcutModal td,
 #keyboardShortcutModal th {
   padding-bottom: 0;
@@ -618,7 +517,6 @@ html, body {
   margin-bottom: 1rem;
 }
 
-// Add spacing between dropdown toggle and content
 .collapseNotes,
 .collapseTomorrowEdit {
   margin-top: 0.5rem;
@@ -632,17 +530,16 @@ html, body {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  margin-bottom: 0.75rem; // Add spacing between button and dropdown
-
-  .chevron-icon {
-    margin-left: 0.5rem;
-    transition: transform 0.3s ease;
-  }
-
-  // Rotate chevron when expanded
-  &:not(.collapsed) .chevron-icon {
-    transform: rotate(180deg);
-  }
+  margin-bottom: 0.75rem;
+}
+.notesLink .chevron-icon,
+.tomorrowEditLink .chevron-icon {
+  margin-left: 0.5rem;
+  transition: transform 0.3s ease;
+}
+.notesLink:not(.collapsed) .chevron-icon,
+.tomorrowEditLink:not(.collapsed) .chevron-icon {
+  transform: rotate(180deg);
 }
 
 .notes-edit-form .form-group {
@@ -668,62 +565,39 @@ html, body {
   color: var(--text-primary);
 }
 
-// ================================
-// DARK MODE SPECIFIC REFINEMENTS
-// ================================
-
-[data-theme="dark"] {
-  // Make sure images/icons don't appear too bright
-  img {
-    opacity: 0.9;
-  }
-
-  // Adjust borders to be more visible
-  .card,
-  .modal-content,
-  .dropdown-menu {
-    border-width: 1px;
-  }
-
-  // Ensure table styles work in dark mode
-  .table {
-    color: var(--text-primary);
-
-    thead th {
-      border-bottom-color: var(--border-color);
-    }
-
-    td, th {
-      border-top-color: var(--border-color);
-    }
-  }
-
-  .table-striped tbody tr:nth-of-type(odd) {
-    background-color: var(--bg-secondary);
-  }
-
-  // Close buttons in modals
-  .close {
-    color: var(--text-primary);
-    text-shadow: none;
-    opacity: 0.8;
-
-    &:hover {
-      opacity: 1;
-    }
-  }
+[data-theme=dark] img {
+  opacity: 0.9;
+}
+[data-theme=dark] .card,
+[data-theme=dark] .modal-content,
+[data-theme=dark] .dropdown-menu {
+  border-width: 1px;
+}
+[data-theme=dark] .table {
+  color: var(--text-primary);
+}
+[data-theme=dark] .table thead th {
+  border-bottom-color: var(--border-color);
+}
+[data-theme=dark] .table td, [data-theme=dark] .table th {
+  border-top-color: var(--border-color);
+}
+[data-theme=dark] .table-striped tbody tr:nth-of-type(odd) {
+  background-color: var(--bg-secondary);
+}
+[data-theme=dark] .close {
+  color: var(--text-primary);
+  text-shadow: none;
+  opacity: 0.8;
+}
+[data-theme=dark] .close:hover {
+  opacity: 1;
 }
 
-// ================================
-// STICKY INTENTIONS
-// ================================
-
-// Hide sticky checkbox input (like neverminded)
-input[name="sticky"] {
+input[name=sticky] {
   display: none;
 }
 
-// Sticky pin icon styling
 .sticky-icon {
   color: var(--color-light-blue);
   margin-left: 0.25em;
@@ -731,62 +605,43 @@ input[name="sticky"] {
   font-size: 0.9em;
 }
 
-// Dropdown item styling for sticky button
 .sticky_button {
   cursor: pointer;
 }
 
-// ================================
-// FROGGY INTENTIONS
-// ================================
-
-// Hide froggy checkbox input (like sticky/neverminded)
-input[name="froggy"] {
+input[name=froggy] {
   display: none;
 }
 
-// Froggy emoji styling
 .froggy-icon {
   margin-left: 0.25em;
   margin-right: 0.25em;
   font-size: 1em;
 }
 
-// Dropdown item styling for froggy button
 .froggy_button {
   cursor: pointer;
 }
 
-// ================================
-// ANXIETY-INDUCING INTENTIONS
-// ================================
-
-// Hide anxiety_inducing checkbox input
-input[name="anxiety_inducing"] {
+input[name=anxiety_inducing] {
   display: none;
 }
 
-// Lightning bolt emoji styling
 .anxiety-icon {
   margin-left: 0.25em;
   margin-right: 0.25em;
   font-size: 1em;
 }
 
-// Dropdown item styling for anxiety button
 .anxiety_button {
   cursor: pointer;
 }
 
-// ================================
-// CHAT SIDEBAR
-// ================================
-
-// Floating toggle button (hidden on desktop, visible on mobile)
 .chat-toggle-btn {
-  display: none; // Hidden by default on desktop
-
-  @media (max-width: 768px) {
+  display: none;
+}
+@media (max-width: 768px) {
+  .chat-toggle-btn {
     display: flex;
     position: fixed;
     bottom: 30px;
@@ -800,19 +655,17 @@ input[name="anxiety_inducing"] {
     justify-content: center;
     font-size: 24px;
     transition: all 0.3s ease;
-
-    &:hover {
-      transform: scale(1.1);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-    }
+  }
+  .chat-toggle-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
   }
 }
 
-// Sidebar container
 .chat-sidebar {
   position: fixed;
   top: 0;
-  right: 0; // Always visible on desktop
+  right: 0;
   width: 380px;
   height: 100vh;
   background-color: var(--bg-primary);
@@ -821,21 +674,19 @@ input[name="anxiety_inducing"] {
   z-index: 1001;
   display: flex;
   flex-direction: column;
-
-  // Mobile: hide by default, show when toggled
-  @media (max-width: 768px) {
+}
+@media (max-width: 768px) {
+  .chat-sidebar {
     right: -100vw;
     width: 100vw;
     max-width: 100vw;
     transition: right 0.3s ease;
-
-    &[data-visible="true"] {
-      right: 0;
-    }
+  }
+  .chat-sidebar[data-visible=true] {
+    right: 0;
   }
 }
 
-// Sidebar header
 .chat-sidebar-header {
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--border-color);
@@ -854,20 +705,19 @@ input[name="anxiety_inducing"] {
 }
 
 #chat-close-btn {
-  display: none; // Hidden on desktop (sidebar is permanent)
+  display: none;
   color: var(--text-secondary);
   padding: 0.25rem;
-
-  &:hover {
-    color: var(--text-primary);
-  }
-
-  @media (max-width: 768px) {
-    display: block; // Visible on mobile (sidebar is toggleable)
+}
+#chat-close-btn:hover {
+  color: var(--text-primary);
+}
+@media (max-width: 768px) {
+  #chat-close-btn {
+    display: block;
   }
 }
 
-// Messages container
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -882,14 +732,12 @@ input[name="anxiety_inducing"] {
   padding: 1rem;
   border-radius: 8px;
   color: var(--text-primary);
-
-  ul {
-    margin: 0.5rem 0;
-    padding-left: 1.5rem;
-  }
+}
+.chat-welcome ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
 }
 
-// Individual messages
 .chat-message {
   padding: 0.875rem 1.125rem;
   border-radius: 12px;
@@ -912,106 +760,94 @@ input[name="anxiety_inducing"] {
   color: var(--text-primary);
   border: 1px solid var(--border-color);
   align-self: flex-start;
-
-  // Markdown styling
-  p {
-    margin: 0 0 0.75rem 0;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    margin: 1rem 0 0.5rem 0;
-    font-weight: 600;
-
-    &:first-child {
-      margin-top: 0;
-    }
-  }
-
-  h1 { font-size: 1.5rem; }
-  h2 { font-size: 1.3rem; }
-  h3 { font-size: 1.1rem; }
-  h4, h5, h6 { font-size: 1rem; }
-
-  ul, ol {
-    margin: 0.5rem 0;
-    padding-left: 1.5rem;
-
-    li {
-      margin: 0.25rem 0;
-    }
-  }
-
-  code {
-    background-color: rgba(0, 0, 0, 0.1);
-    padding: 0.15rem 0.4rem;
-    border-radius: 3px;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9em;
-  }
-
-  pre {
-    background-color: rgba(0, 0, 0, 0.1);
-    padding: 0.75rem;
-    border-radius: 6px;
-    overflow-x: auto;
-    margin: 0.5rem 0;
-
-    code {
-      background-color: transparent;
-      padding: 0;
-    }
-  }
-
-  blockquote {
-    border-left: 3px solid var(--border-color);
-    margin: 0.5rem 0;
-    padding-left: 1rem;
-    color: var(--text-secondary);
-  }
-
-  a {
-    color: var(--link-color);
-    text-decoration: underline;
-
-    &:hover {
-      opacity: 0.8;
-    }
-  }
-
-  strong {
-    font-weight: 600;
-  }
-
-  em {
-    font-style: italic;
-  }
-
-  hr {
-    border: none;
-    border-top: 1px solid var(--border-color);
-    margin: 1rem 0;
-  }
-
-  table {
-    border-collapse: collapse;
-    width: 100%;
-    margin: 0.5rem 0;
-
-    th, td {
-      border: 1px solid var(--border-color);
-      padding: 0.5rem;
-      text-align: left;
-    }
-
-    th {
-      background-color: rgba(0, 0, 0, 0.05);
-      font-weight: 600;
-    }
-  }
+}
+.chat-message-assistant p {
+  margin: 0 0 0.75rem 0;
+}
+.chat-message-assistant p:last-child {
+  margin-bottom: 0;
+}
+.chat-message-assistant h1, .chat-message-assistant h2, .chat-message-assistant h3, .chat-message-assistant h4, .chat-message-assistant h5, .chat-message-assistant h6 {
+  margin: 1rem 0 0.5rem 0;
+  font-weight: 600;
+}
+.chat-message-assistant h1:first-child, .chat-message-assistant h2:first-child, .chat-message-assistant h3:first-child, .chat-message-assistant h4:first-child, .chat-message-assistant h5:first-child, .chat-message-assistant h6:first-child {
+  margin-top: 0;
+}
+.chat-message-assistant h1 {
+  font-size: 1.5rem;
+}
+.chat-message-assistant h2 {
+  font-size: 1.3rem;
+}
+.chat-message-assistant h3 {
+  font-size: 1.1rem;
+}
+.chat-message-assistant h4, .chat-message-assistant h5, .chat-message-assistant h6 {
+  font-size: 1rem;
+}
+.chat-message-assistant ul, .chat-message-assistant ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+.chat-message-assistant ul li, .chat-message-assistant ol li {
+  margin: 0.25rem 0;
+}
+.chat-message-assistant code {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-family: "Courier New", monospace;
+  font-size: 0.9em;
+}
+.chat-message-assistant pre {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 0.75rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+.chat-message-assistant pre code {
+  background-color: transparent;
+  padding: 0;
+}
+.chat-message-assistant blockquote {
+  border-left: 3px solid var(--border-color);
+  margin: 0.5rem 0;
+  padding-left: 1rem;
+  color: var(--text-secondary);
+}
+.chat-message-assistant a {
+  color: var(--link-color);
+  text-decoration: underline;
+}
+.chat-message-assistant a:hover {
+  opacity: 0.8;
+}
+.chat-message-assistant strong {
+  font-weight: 600;
+}
+.chat-message-assistant em {
+  font-style: italic;
+}
+.chat-message-assistant hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 1rem 0;
+}
+.chat-message-assistant table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0;
+}
+.chat-message-assistant table th, .chat-message-assistant table td {
+  border: 1px solid var(--border-color);
+  padding: 0.5rem;
+  text-align: left;
+}
+.chat-message-assistant table th {
+  background-color: rgba(0, 0, 0, 0.05);
+  font-weight: 600;
 }
 
 .chat-message-system {
@@ -1023,7 +859,6 @@ input[name="anxiety_inducing"] {
   max-width: 100%;
 }
 
-// Loading indicator
 .chat-loading {
   padding: 0.75rem 1rem;
   display: flex;
@@ -1032,7 +867,6 @@ input[name="anxiety_inducing"] {
   margin: 0 1rem;
 }
 
-// Input container
 .chat-input-container {
   border-top: 1px solid var(--border-color);
   padding: 1.25rem 1.5rem;
@@ -1052,10 +886,9 @@ input[name="anxiety_inducing"] {
   margin: 0;
   cursor: pointer;
   color: var(--text-secondary);
-
-  input {
-    margin-right: 0.5rem;
-  }
+}
+.chat-checkbox-label input {
+  margin-right: 0.5rem;
 }
 
 .chat-input-wrapper {
@@ -1065,24 +898,23 @@ input[name="anxiety_inducing"] {
 
 .chat-input {
   flex: 1;
-  resize: none; // Disable manual resize, autosize will handle it
+  resize: none;
   min-height: 56px;
-  max-height: 200px; // Max height before scrolling
-  overflow-y: auto; // Show scrollbar only when exceeds max-height
+  max-height: 200px;
+  overflow-y: auto;
   background-color: var(--form-control-bg);
   color: var(--form-control-text);
   border: 1.5px solid var(--form-control-border);
   border-radius: 12px;
-  padding: 10px 58px 10px 16px; // Comfortable padding, extra on right for button
+  padding: 10px 58px 10px 16px;
   font-size: 0.9375rem;
   line-height: 1.5;
   transition: border-color 0.2s ease, height 0.1s ease;
-
-  &:focus {
-    outline: none;
-    border-color: var(--color-light-blue);
-    box-shadow: 0 0 0 1px var(--color-light-blue);
-  }
+}
+.chat-input:focus {
+  outline: none;
+  border-color: var(--color-light-blue);
+  box-shadow: 0 0 0 1px var(--color-light-blue);
 }
 
 .chat-send-btn {
@@ -1102,32 +934,27 @@ input[name="anxiety_inducing"] {
   font-size: 1.125rem;
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-
-  &:hover:not(:disabled) {
-    background-color: var(--color-light-blue);
-    opacity: 0.9;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-    color: white;
-  }
-
-  &:active:not(:disabled) {
-    transform: translateY(0);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(17, 138, 178, 0.2);
-  }
+}
+.chat-send-btn:hover:not(:disabled) {
+  background-color: var(--color-light-blue);
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+  color: white;
+}
+.chat-send-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+.chat-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.chat-send-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(17, 138, 178, 0.2);
 }
 
-// Tool execution badges
 .chat-tools-used {
   margin-bottom: 8px;
   display: flex;
@@ -1176,45 +1003,34 @@ input[name="anxiety_inducing"] {
   margin-top: 4px;
 }
 
-// Dark mode adjustments
-[data-theme=dark] {
-  .chat-message-user {
-    background-color: var(--color-darkmode-blue);
-  }
-
-  .chat-sidebar {
-    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.5);
-  }
-
-  .chat-message-assistant {
-    code {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    pre {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    table th {
-      background-color: rgba(255, 255, 255, 0.05);
-    }
-  }
-
-  .chat-tool-badge {
-    background-color: #2d2d2d;
-  }
-
-  .chat-tool-badge.success {
-    background-color: rgba(6, 214, 160, 0.1);
-    color: #7dcc7d;
-  }
-
-  .chat-tool-badge.error {
-    background-color: rgba(239, 71, 111, 0.1);
-    color: #cc7d7d;
-  }
-
-  .chat-tool-badge .tool-result {
-    color: #aaa;
-  }
+[data-theme=dark] .chat-message-user {
+  background-color: var(--color-darkmode-blue);
 }
+[data-theme=dark] .chat-sidebar {
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.5);
+}
+[data-theme=dark] .chat-message-assistant code {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+[data-theme=dark] .chat-message-assistant pre {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+[data-theme=dark] .chat-message-assistant table th {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+[data-theme=dark] .chat-tool-badge {
+  background-color: #2d2d2d;
+}
+[data-theme=dark] .chat-tool-badge.success {
+  background-color: rgba(6, 214, 160, 0.1);
+  color: #7dcc7d;
+}
+[data-theme=dark] .chat-tool-badge.error {
+  background-color: rgba(239, 71, 111, 0.1);
+  color: #cc7d7d;
+}
+[data-theme=dark] .chat-tool-badge .tool-result {
+  color: #aaa;
+}
+
+/*# sourceMappingURL=custom_bootstrap_vars.css.map */
