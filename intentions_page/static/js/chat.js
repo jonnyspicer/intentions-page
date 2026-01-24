@@ -3,19 +3,17 @@
 (function() {
     'use strict';
 
-    // State
-    let chatVisible = localStorage.getItem('chatSidebarVisible') === 'true';
+    // State - default to open on desktop (>=769px) if no saved preference
+    const isDesktop = window.innerWidth >= 769;
+    const savedState = localStorage.getItem('chatSidebarVisible');
+    let chatVisible = savedState !== null ? savedState === 'true' : isDesktop;
     let isLoading = false;
     let showToolConfirmations = true; // Default to showing confirmations
 
     // DOM elements
     const chatSidebar = document.getElementById('chat-sidebar');
-    const chatToggleBtn = document.getElementById('chat-toggle-btn');
-    const chatCloseBtn = document.getElementById('chat-close-btn');
     const chatMessages = document.getElementById('chat-messages');
     const chatInput = document.getElementById('chat-input');
-    const chatSendBtn = document.getElementById('chat-send-btn');
-    const chatClearBtn = document.getElementById('chat-clear-btn');
     const chatLoading = document.getElementById('chat-loading');
     const chatIncludeIntentions = document.getElementById('chat-include-intentions');
 
@@ -26,10 +24,16 @@
         autosize(chatInput);
     }
 
+    // Helper function to get toggle button (always fetch fresh from DOM)
+    function getChatToggleBtn() {
+        return document.getElementById('chat-toggle-btn');
+    }
+
     // Initialize sidebar visibility from saved state
     chatSidebar.setAttribute('data-visible', chatVisible);
     if (chatVisible) {
-        chatToggleBtn.classList.add('sidebar-open');
+        const toggleBtn = getChatToggleBtn();
+        if (toggleBtn) toggleBtn.classList.add('sidebar-open');
     }
 
     // Load chat history on page load
@@ -41,11 +45,12 @@
         chatSidebar.setAttribute('data-visible', chatVisible);
 
         // Update button state (CSS handles icon rotation via transform)
+        const toggleBtn = getChatToggleBtn();
         if (chatVisible) {
-            chatToggleBtn.classList.add('sidebar-open');
+            if (toggleBtn) toggleBtn.classList.add('sidebar-open');
             chatInput.focus();
         } else {
-            chatToggleBtn.classList.remove('sidebar-open');
+            if (toggleBtn) toggleBtn.classList.remove('sidebar-open');
         }
 
         // Save state to localStorage
@@ -247,7 +252,8 @@
     function setLoading(loading) {
         isLoading = loading;
         chatLoading.style.display = loading ? 'flex' : 'none';
-        chatSendBtn.disabled = loading;
+        const sendBtn = document.getElementById('chat-send-btn');
+        if (sendBtn) sendBtn.disabled = loading;
         chatInput.disabled = loading;
 
         if (loading) {
@@ -294,11 +300,36 @@
         return meta ? meta.getAttribute('content') : null;
     }
 
-    // Event listeners
-    chatToggleBtn.addEventListener('click', toggleChat);
-    chatCloseBtn.addEventListener('click', toggleChat);
-    chatSendBtn.addEventListener('click', sendMessage);
-    chatClearBtn.addEventListener('click', clearChatHistory);
+    // Event listeners using event delegation for buttons that may be replaced
+    document.addEventListener('click', function(e) {
+        // Toggle button
+        if (e.target.closest('#chat-toggle-btn')) {
+            e.preventDefault();
+            toggleChat();
+            return;
+        }
+
+        // Close button
+        if (e.target.closest('#chat-close-btn')) {
+            e.preventDefault();
+            toggleChat();
+            return;
+        }
+
+        // Send button
+        if (e.target.closest('#chat-send-btn')) {
+            e.preventDefault();
+            sendMessage();
+            return;
+        }
+
+        // Clear button
+        if (e.target.closest('#chat-clear-btn')) {
+            e.preventDefault();
+            clearChatHistory();
+            return;
+        }
+    });
 
     // Send on Enter (but Shift+Enter for new line)
     chatInput.addEventListener('keydown', function(e) {
