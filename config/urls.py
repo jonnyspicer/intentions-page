@@ -4,7 +4,11 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views import defaults as default_views
 from django.views.generic import TemplateView
+from drf_spectacular.views import (SpectacularAPIView, SpectacularRedocView,
+                                   SpectacularSwaggerView)
 from rest_framework.authtoken.views import obtain_auth_token
+
+from intentions_page.api.auth_views import GoogleAuthView
 
 urlpatterns = [
     path(
@@ -15,10 +19,8 @@ urlpatterns = [
     # User management
     path("users/", include("intentions_page.users.urls", namespace="users")),
     path("accounts/", include("allauth.urls")),
-
     # Your stuff: custom urls includes go here
     path("", include("intentions_page.urls")),
-
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # API URLS
@@ -27,6 +29,20 @@ urlpatterns += [
     path("api/", include("config.api_router")),
     # DRF auth token
     path("auth-token/", obtain_auth_token),
+    # Google OAuth for mobile apps
+    path("api/auth/google/", GoogleAuthView.as_view(), name="google-auth"),
+    # API schema and documentation
+    path("api/schema/", SpectacularAPIView.as_view(), name="api-schema"),
+    path(
+        "api/docs/",
+        SpectacularSwaggerView.as_view(url_name="api-schema"),
+        name="api-docs",
+    ),
+    path(
+        "api/redoc/",
+        SpectacularRedocView.as_view(url_name="api-schema"),
+        name="api-redoc",
+    ),
 ]
 
 if settings.DEBUG:
